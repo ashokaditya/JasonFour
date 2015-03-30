@@ -1,4 +1,4 @@
-package sc;
+package DataStructures;
 
 import java.util.LinkedList;
 
@@ -23,10 +23,14 @@ public class Command {
 			cmds.add( new Command( d ) );
 		}
 
-
 		every = cmds.toArray( new Command[0] );
 	}
 
+    //Stores all possible commands that are available to each agent.
+    //The collections is final, can't be modified. This saves time from
+    //creating all possible commands every time we need them. Also saves
+    //space as instead of a Command object we will be passing a reference
+    //to a static Command object.
 	public final static Command[] every;
 
 	private static boolean isOpposite( dir d1, dir d2 ) {
@@ -64,10 +68,8 @@ public class Command {
 
 		return actType.toString() + "(" + dir1 + "," + dir2 + ")";
 	}
-	
 
 	public String toActionString() {
 		return "[" + this.toString() + "]";
 	}
-
 }
