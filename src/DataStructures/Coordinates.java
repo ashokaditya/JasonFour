@@ -5,21 +5,29 @@ public class Coordinates {
     private Integer y;
     private int hashCode;
 
+    //log(MAX_COL) should be less than offset
+    private final static int offset = 7;
+
+    public Coordinates(Integer hashCode) {
+        this.hashCode = hashCode;
+
+        x = hashCode >> offset;
+        y = hashCode - (x << offset);
+    }
+
     public Integer getX() {
-        return x;
+        return this.x;
     }
 
     public Integer getY() {
-        return y;
+        return this.y;
     }
 
-    public Coordinates(int x, int y){
-        this.x = x;
-        this.y = y;
+    public Coordinates(int x, int y) {
+        this.x = Integer.valueOf(x);
+        this.y = Integer.valueOf(y);
 
-        final int prime = 57;
-
-        hashCode = (prime + this.x.hashCode()) * prime + this.y.hashCode();
+        this.hashCode = (x << offset) + y;
     }
 
     @Override
@@ -27,14 +35,16 @@ public class Coordinates {
         return this.hashCode;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        Coordinates other = (Coordinates) obj;
+    public static int hashCode(int x, int y){
+        return (x << offset) + y;
+    }
 
-        return this.x.equals(other.x) && this.y.equals(other.y);
+    public boolean equals(Object obj) {
+        Coordinates other = (Coordinates)obj;
+        return other == null?false:this.x == other.x && this.y == other.y;
     }
 
     public int manhattanDistanceTo(Coordinates targetCoordinates) {
-        return Math.abs(x - targetCoordinates.getX()) + Math.abs(y - targetCoordinates.getY());
+        return Math.abs(this.x.intValue() - targetCoordinates.getX().intValue()) + Math.abs(this.y.intValue() - targetCoordinates.getY().intValue());
     }
 }

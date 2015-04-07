@@ -5,19 +5,20 @@ import java.util.HashSet;
 import java.util.Set;
 
 public final class Level {
-    private static HashSet<Coordinates> walls = new HashSet<Coordinates>();
-    private static HashMap<Coordinates, Character> goalsByCoordinates = new HashMap<Coordinates, Character>();
-    private static HashMap<Character, HashSet<Coordinates>> goalsByCharacter = new HashMap<Character, HashSet<Coordinates>>();
+    private static HashSet<Integer> walls = new HashSet<Integer>();
+    private static HashMap<Integer, Character> goalsByCoordinates = new HashMap<Integer, Character>();
+    private static HashMap<Character, HashSet<Integer>> goalsByCharacter = new HashMap<Character, HashSet<Integer>>();
+//    public static HashMap<Node, HashMap<Coordinates, Character>> boxesByNodes = new HashMap<Node, HashMap<Coordinates, Character>>();
 
     private Level() {
     }
 
     public static void addWall(int x, int y) {
-        walls.add(new Coordinates(x, y));
+        walls.add(Coordinates.hashCode(x, y));
     }
 
     public static void addGoal(int x, int y, char goalLetter) {
-        Coordinates coordinates = new Coordinates(x, y);
+        Integer coordinates = Coordinates.hashCode(x, y);
 
         goalsByCoordinates.put(coordinates, goalLetter);
 
@@ -25,29 +26,39 @@ public final class Level {
             goalsByCharacter.get(goalLetter).add(coordinates);
         }
         else{
-            HashSet<Coordinates> newCoordinates = new HashSet<Coordinates>();
+            HashSet<Integer> newCoordinates = new HashSet<Integer>();
             newCoordinates.add(coordinates);
             goalsByCharacter.put(goalLetter, newCoordinates);
         }
     }
 
+//    public static void addNode(Node n){
+//        boxesByNodes.put(n, new HashMap<Coordinates, Character>());
+//    }
+//
+//    public static HashMap<Coordinates, Character> getBoxes(Node n){
+//        return boxesByNodes.get(n);
+//    }
+
+//    public static void add(Node n, )
+
     public static char getGoal(int x, int y) {
-        return goalsByCoordinates.get(new Coordinates(x, y));
+        return goalsByCoordinates.get(Coordinates.hashCode(x, y));
     }
 
     public static boolean hasGoal(int x, int y) {
-        return goalsByCoordinates.containsKey(new Coordinates(x, y));
+        return goalsByCoordinates.containsKey(Coordinates.hashCode(x, y));
     }
 
-    public static boolean hasWall(int row, int col) {
-        return walls.contains(new Coordinates(row, col));
+    public static boolean hasWall(int x, int y) {
+        return walls.contains(Coordinates.hashCode(x, y));
     }
 
     public static Set<Character> getGoals() {
         return goalsByCharacter.keySet();
     }
 
-    public static HashSet<Coordinates> getGoalCoordinates(char goalLetter) {
+    public static HashSet<Integer> getGoalCoordinates(char goalLetter) {
         return goalsByCharacter.get(Character.toLowerCase(goalLetter));
     }
 }

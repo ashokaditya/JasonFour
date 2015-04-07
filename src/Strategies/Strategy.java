@@ -2,6 +2,7 @@ package Strategies;
 
 import DataStructures.Memory;
 import DataStructures.Node;
+
 import java.util.HashSet;
 
 public abstract class Strategy {

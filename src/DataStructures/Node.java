@@ -4,7 +4,6 @@ import java.util.*;
 
 public class Node {
 
-//    private static Random rnd = new Random(1);
     public static int MAX_ROW = 70;
     public static int MAX_COLUMN = 70;
 
@@ -15,8 +14,10 @@ public class Node {
     public Command action;
 
     //TODO: is it possible to save space ?
-    private HashMap<Coordinates, Character> boxes = new HashMap<Coordinates, Character>();
-    private HashMap<Character, HashSet<Coordinates>> boxesByCharacter = new HashMap<Character, HashSet<Coordinates>>();
+    private HashMap<Integer, Character> boxes = new HashMap<Integer, Character>();
+    private HashMap<Character, HashSet<Integer>> boxesByCharacter = new HashMap<Character, HashSet<Integer>>();
+//    private HashMap<Coordinates, Character> boxes = new HashMap<Coordinates, Character>();
+//    private HashMap<Character, HashSet<Coordinates>> boxesByCharacter = new HashMap<Character, HashSet<Coordinates>>();
 
     private int g;
 
@@ -39,12 +40,13 @@ public class Node {
 
     public boolean isGoalState() {
         for (Character goalLetter : boxesByCharacter.keySet()) {
-            HashSet<Coordinates> goalSet = Level.getGoalCoordinates(goalLetter);
-            HashSet<Coordinates> boxesSet = this.getBoxes(goalLetter);
+            HashSet<Integer> boxesSet = this.getBoxes(goalLetter);
+            HashSet<Integer> goalsSet = Level.getGoalCoordinates(goalLetter);
 
-            //TODO: this might be slow
-            if (!goalSet.equals(boxesSet)) {
-                return false;
+            for(Integer goalHash : Level.getGoalCoordinates(goalLetter)){
+                if(!boxesSet.contains(goalHash)){
+                    return false;
+                }
             }
         }
 
@@ -102,8 +104,8 @@ public class Node {
     }
 
     private void moveBox(int oldBoxX, int oldBoxY, int newBoxX, int newBoxY) {
-        Coordinates oldBoxCoordinates = new Coordinates(oldBoxX, oldBoxY);
-        Coordinates newBoxCoordinates = new Coordinates(newBoxX, newBoxY);
+        Integer oldBoxCoordinates = Coordinates.hashCode(oldBoxX, oldBoxY);
+        Integer newBoxCoordinates = Coordinates.hashCode(newBoxX, newBoxY);
 
         Character boxLetter = this.boxes.remove(oldBoxCoordinates);
         this.boxes.put(newBoxCoordinates, boxLetter);
@@ -124,7 +126,7 @@ public class Node {
     }
 
     private boolean hasBoxAt(int x, int y) {
-        return boxes.containsKey(new Coordinates(x, y));
+        return boxes.containsKey(Coordinates.hashCode(x, y));
     }
 
     private int dirToRowChange(Command.dir d) {
@@ -138,11 +140,11 @@ public class Node {
     private Node ChildNode() {
         Node copy = new Node(this);
 
-        copy.boxes = (HashMap<Coordinates, Character>) this.boxes.clone();
-        copy.boxesByCharacter = new HashMap<Character, HashSet<Coordinates>>();
+        copy.boxes = (HashMap<Integer, Character>) this.boxes.clone();
+        copy.boxesByCharacter = new HashMap<Character, HashSet<Integer>>();
 
         for (char c : this.boxesByCharacter.keySet()){
-            copy.boxesByCharacter.put(c, (HashSet<Coordinates>)this.boxesByCharacter.get(c).clone());
+            copy.boxesByCharacter.put(c, (HashSet<Integer>)this.boxesByCharacter.get(c).clone());
         }
 
         return copy;
@@ -167,8 +169,8 @@ public class Node {
         int result = 1;
         result = prime * result + agentCol;
         result = prime * result + agentRow;
-        for(Map.Entry entry : this.boxes.entrySet()){
-            result = prime * result + entry.hashCode();
+        for(Integer x : this.boxes.keySet()){
+            result = prime * result + x.hashCode();
         }
         //TODO: ???
 //        result = prime * result + Arrays.deepHashCode(boxes);
@@ -194,10 +196,7 @@ public class Node {
         if (!boxes.equals(other.boxes)) {
             return false;
         }
-        //if ( !Arrays.deepEquals( goals, other.goals ) )
-        //	return false;
-        //if ( !Arrays.deepEquals( walls, other.walls ) )
-        //	return false;
+
         return true;
     }
 
@@ -227,25 +226,25 @@ public class Node {
     }
 
     public char getBoxLetter(int x, int y) {
-        return boxes.get(new Coordinates(x, y));
+        return boxes.get(Coordinates.hashCode(x, y));
     }
 
     public void addBox(int x, int y, char boxLetter) {
-        Coordinates coordinates = new Coordinates(x, y);
+        Integer coordinates = Coordinates.hashCode(x, y);
 
-        this.boxes.put(coordinates, boxLetter);
+        this.boxes.put(Coordinates.hashCode(x, y), boxLetter);
 
         if(this.boxesByCharacter.containsKey(boxLetter)){
             this.boxesByCharacter.get(boxLetter).add(coordinates);
         }
         else{
-            HashSet<Coordinates> newCoordinates = new HashSet<Coordinates>();
+            HashSet<Integer> newCoordinates = new HashSet<Integer>();
             newCoordinates.add(coordinates);
             this.boxesByCharacter.put(boxLetter, newCoordinates);
         }
     }
 
-    public HashSet<Coordinates> getBoxes(char boxLetter) {
+    public HashSet<Integer> getBoxes(char boxLetter) {
         return this.boxesByCharacter.get(Character.toUpperCase(boxLetter));
     }
 }
