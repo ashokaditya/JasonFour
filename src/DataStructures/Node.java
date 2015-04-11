@@ -19,7 +19,11 @@ public class Node {
 //    private HashMap<Coordinates, Character> boxes = new HashMap<Coordinates, Character>();
 //    private HashMap<Character, HashSet<Coordinates>> boxesByCharacter = new HashMap<Character, HashSet<Coordinates>>();
 
+    public int goal;
+    public int box;
+
     private int g;
+    public Map<Integer, Character> agents = new HashMap<Integer, Character>();
 
     public Node(Node parent) {
         this.parent = parent;
@@ -39,18 +43,20 @@ public class Node {
     }
 
     public boolean isGoalState() {
-        for (Character goalLetter : boxesByCharacter.keySet()) {
-            HashSet<Integer> boxesSet = this.getBoxes(goalLetter);
-            HashSet<Integer> goalsSet = Level.getGoalCoordinates(goalLetter);
+        return box == goal;
 
-            for(Integer goalHash : Level.getGoalCoordinates(goalLetter)){
-                if(!boxesSet.contains(goalHash)){
-                    return false;
-                }
-            }
-        }
-
-        return true;
+//        for (Character goalLetter : boxesByCharacter.keySet()) {
+//            HashSet<Integer> boxesSet = this.getBoxes(goalLetter);
+////            HashSet<Integer> goalsSet = Level.getGoalCoordinates(goalLetter);
+//
+//            for(Integer goalHash : Level.getGoalCoordinates(goalLetter)){
+//                if(!boxesSet.contains(goalHash)){
+//                    return false;
+//                }
+//            }
+//        }
+//
+//        return true;
     }
 
     public ArrayList<Node> getExpandedNodes() {
@@ -112,6 +118,10 @@ public class Node {
 
         this.boxesByCharacter.get(boxLetter).remove(oldBoxCoordinates);
         this.boxesByCharacter.get(boxLetter).add(newBoxCoordinates);
+
+        if(box == oldBoxCoordinates){
+            box = newBoxCoordinates;
+        }
     }
 
     private void moveAgent(int newAgentX, int newAgentY) {
@@ -126,6 +136,7 @@ public class Node {
     }
 
     private boolean hasBoxAt(int x, int y) {
+
         return boxes.containsKey(Coordinates.hashCode(x, y));
     }
 
@@ -142,6 +153,8 @@ public class Node {
 
         copy.boxes = (HashMap<Integer, Character>) this.boxes.clone();
         copy.boxesByCharacter = new HashMap<Character, HashSet<Integer>>();
+        copy.box = this.box;
+        copy.goal = this.goal;
 
         for (char c : this.boxesByCharacter.keySet()){
             copy.boxesByCharacter.put(c, (HashSet<Integer>)this.boxesByCharacter.get(c).clone());
@@ -246,5 +259,15 @@ public class Node {
 
     public HashSet<Integer> getBoxes(char boxLetter) {
         return this.boxesByCharacter.get(Character.toUpperCase(boxLetter));
+    }
+
+    public void setDedicatedGoal(Integer boxHashCoordinates, Integer goalHashCoordinates){
+        box = boxHashCoordinates;
+        goal = goalHashCoordinates;
+    }
+
+    public void addBox(Integer key, Character value) {
+        Coordinates coord = new Coordinates(key);
+        addBox(coord.getRow(), coord.getCol(), value);
     }
 }

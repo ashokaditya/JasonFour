@@ -1,8 +1,8 @@
 package DataStructures;
 
 public class Coordinates {
-    private Integer x;
-    private Integer y;
+    private Integer row;
+    private Integer col;
     private int hashCode;
 
     //log(MAX_COL) should be less than offset
@@ -11,23 +11,23 @@ public class Coordinates {
     public Coordinates(Integer hashCode) {
         this.hashCode = hashCode;
 
-        x = hashCode >> offset;
-        y = hashCode - (x << offset);
+        row = hashCode >> offset;
+        col = hashCode - (row << offset);
     }
 
-    public Integer getX() {
-        return this.x;
+    public Integer getRow() {
+        return this.row;
     }
 
-    public Integer getY() {
-        return this.y;
+    public Integer getCol() {
+        return this.col;
     }
 
-    public Coordinates(int x, int y) {
-        this.x = Integer.valueOf(x);
-        this.y = Integer.valueOf(y);
+    public Coordinates(int row, int col) {
+        this.row = Integer.valueOf(row);
+        this.col = Integer.valueOf(col);
 
-        this.hashCode = (x << offset) + y;
+        this.hashCode = (row << offset) + col;
     }
 
     @Override
@@ -41,10 +41,19 @@ public class Coordinates {
 
     public boolean equals(Object obj) {
         Coordinates other = (Coordinates)obj;
-        return other == null?false:this.x == other.x && this.y == other.y;
+        return other == null?false:this.row == other.row && this.col == other.col;
     }
 
     public int manhattanDistanceTo(Coordinates targetCoordinates) {
-        return Math.abs(this.x.intValue() - targetCoordinates.getX().intValue()) + Math.abs(this.y.intValue() - targetCoordinates.getY().intValue());
+        return Math.abs(this.row.intValue() - targetCoordinates.getRow().intValue()) + Math.abs(this.col.intValue() - targetCoordinates.getCol().intValue());
+    }
+
+    public static int manhattanDistance(int sourceHash, int targetHash){
+        int sourceRow = sourceHash >> offset;
+        int targetRow = targetHash >> offset;
+        int sourceCol = sourceHash - (sourceRow << offset);
+        int targetCol = targetHash - (targetRow << offset);
+
+        return Math.abs(sourceRow - targetRow) + Math.abs(sourceCol - targetCol);
     }
 }

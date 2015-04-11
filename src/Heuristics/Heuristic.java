@@ -20,26 +20,32 @@ public abstract class Heuristic implements Comparator<Node> {
 
     public int h(Node n) {
 
-        int totalDistance = 0;
-        int minDistance = Integer.MAX_VALUE;
+        int h = Coordinates.manhattanDistance(n.box, n.goal) +
+                Coordinates.manhattanDistance(Coordinates.hashCode(n.agentRow, n.agentCol), n.box);
+        return h;
 
-        for (Character goalLetter : Level.getGoals()) {
-            for (Integer boxHash : n.getBoxes(goalLetter)) {
-                for(Integer goalHash : Level.getGoalCoordinates(goalLetter)){
-                    Coordinates boxCoordinates = new Coordinates(boxHash);
-                    Coordinates goalCoordinates = new Coordinates(goalHash);
-
-                    int distance = boxCoordinates.manhattanDistanceTo(goalCoordinates);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                    }
-                }
-            }
-
-            totalDistance += minDistance;
-        }
-
-        return totalDistance;
+//        int totalDistance = 0;
+//        int minDistance = Integer.MAX_VALUE;
+//
+//        for (Character goalLetter : Level.getGoals()) {
+//            for (Integer boxHash : n.getBoxes(goalLetter)) {
+//                for(Integer goalHash : Level.getGoalCoordinates(goalLetter)){
+//
+////                    Coordinates boxCoordinates = new Coordinates(boxHash);
+////                    Coordinates goalCoordinates = new Coordinates(goalHash);
+//
+////                    int distance = boxCoordinates.manhattanDistanceTo(goalCoordinates);
+//                    int distance = Coordinates.manhattanDistance(boxHash, goalHash);
+//                    if (distance < minDistance) {
+//                        minDistance = distance;
+//                    }
+//                }
+//            }
+//
+//            totalDistance += minDistance;
+//        }
+//
+//        return totalDistance;
     }
 
     public abstract int f(Node n);
