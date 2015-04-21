@@ -81,7 +81,7 @@ public class Main {
                         n = list.remove(0);
                         jointAction += n.action.toString();
                     } else {
-                        //TODO mellemstykker hvis det er empty
+                        jointAction += "NoOp";
                     }
 
                     if (i + 1 != solutions.size()) {
