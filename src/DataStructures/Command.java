@@ -69,6 +69,13 @@ public class Command {
 		return actType.toString() + "(" + dir1 + "," + dir2 + ")";
 	}
 
+    public static dir GetOpposite(dir direction){
+        if(direction==dir.N) return dir.S;
+        if(direction==dir.S) return dir.N;
+        if(direction==dir.E) return dir.W;
+        return dir.E;
+    }
+
 	public String toActionString() {
 		return "[" + this.toString() + "]";
 	}

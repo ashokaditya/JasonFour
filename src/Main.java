@@ -33,17 +33,22 @@ public class Main {
         List<List<Node>> solutions = new LinkedList<List<Node>>();
 
         for (Map.Entry<Integer, Character> entry : Level.getAgents().entrySet()) {
+            char agentName = entry.getValue();
+            int agentHashCoordinates = entry.getKey();
+
             Node initialState = new Node(null);
 
-            Coordinates agentHashCoordinates = new Coordinates(entry.getKey());
-            initialState.agentRow = agentHashCoordinates.getRow();
-            initialState.agentCol = agentHashCoordinates.getCol();
+            Coordinates agentCoordinates = new Coordinates(agentHashCoordinates);
+            initialState.agentRow = agentCoordinates.getRow();
+            initialState.agentCol = agentCoordinates.getCol();
 
-            Integer boxHashCoordinates = Level.getBoxFor(entry.getValue());
+            Integer goal = Level.getGoalFor(agentName);
+            Integer box = Level.getBoxFor(agentName, goal);
+
             for (Map.Entry<Integer, Character> entry2 : Level.getBoxes().entrySet()) {
                 initialState.addBox(entry2.getKey(), entry2.getValue());
             }
-            initialState.setDedicatedGoal(boxHashCoordinates, Level.getGoalFor(boxHashCoordinates));
+            initialState.setDedicatedGoal(box, goal);
 
             Strategy str = getStrategy(initialState, args);
             SearchClient client = new SearchClient(initialState);
@@ -75,10 +80,12 @@ public class Main {
                 jointAction = "[";
 
                 int i = 0;
+                Integer current = 0;
                 for (List<Node> list : solutions) {
 
                     if (!list.isEmpty()) {
                         n = list.remove(0);
+                        Level.update(Character.forDigit(current++, 10), n.action);
                         jointAction += n.action.toString();
                     } else {
                         jointAction += "NoOp";

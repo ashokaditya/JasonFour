@@ -82,6 +82,9 @@ public class Node {
                     int newBoxCol = newAgentCol + dirToColChange(c.dir2);
                     // .. and that new cell of box is free
                     if (this.hasFreeCellAt(newBoxRow, newBoxCol)) {
+
+                        // .. and it's of this agent's color
+
                         Node n = this.ChildNode();
                         n.action = c;
                         n.moveAgent(newAgentRow, newAgentCol);
@@ -96,6 +99,9 @@ public class Node {
                     int boxCol = this.agentCol + dirToColChange(c.dir2);
                     // .. and there's a box in "dir2" of the agent
                     if (this.hasBoxAt(boxRow, boxCol)) {
+
+                        // .. and is in this agent's color
+
                         Node n = this.ChildNode();
                         n.action = c;
                         n.moveAgent(newAgentRow, newAgentCol);
