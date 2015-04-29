@@ -1,4 +1,4 @@
-SET levels=SAD1 SAD2 MA1 MA2 MA2colors
+SET levels=SAD1 SAD2 MA1 MA2 MA2colors environment\masimple1 
 
 DEL results.txt
 

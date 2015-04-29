@@ -11,11 +11,7 @@ import Strategies.StrategyBestFirst;
 import Strategies.StrategyDFS;
 
 import java.io.*;
-import java.nio.Buffer;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  * Created by Administrator on 4/10/2015.
@@ -49,7 +45,7 @@ public class Main {
         // Read level and create the initial state of the problem
         ReadInput(serverMessages);
 
-        List<List<Node>> solutions = new LinkedList<List<Node>>();
+        HashMap<Character, List<Node>> solutions = new HashMap<Character, List<Node>>();
 
         for (Map.Entry<Integer, Character> entry : Level.getAgents().entrySet()) {
             char agentName = entry.getValue();
@@ -68,11 +64,16 @@ public class Main {
             for (Map.Entry<Integer, Character> entry2 : Level.getBoxes().entrySet()) {
                 initialState.addBox(entry2.getKey(), entry2.getValue());
             }
+
+            for(Map.Entry<Integer, Character> entry2 : Level.getAgents().entrySet()) {
+                initialState.addAgent(entry2.getKey(), entry2.getValue());
+            }
+
             initialState.setDedicatedGoal(box, goal);
 
             Strategy str = getStrategy(initialState, args);
             SearchClient client = new SearchClient(initialState);
-            solutions.add(client.Search(str));
+            solutions.put(initialState.getAgentName(agentHashCoordinates), client.Search(str));
             if (fromFile) {
                 System.out.format("Explored for agent \"%c\": %d", agentName,  str.explored.size());
                 System.out.println();
@@ -83,7 +84,7 @@ public class Main {
 
         Boolean solved = false;
         int solutionLength = 0;
-        for (List<Node> list : solutions) {
+        for (List<Node> list : solutions.values()) {
             if (list != null) {
                 solved = true;
                 if (list.size() > solutionLength) {
@@ -110,11 +111,13 @@ public class Main {
 
                 int i = 0;
                 Integer current = 0;
-                for (List<Node> list : solutions) {
+                for (Map.Entry<Character, List<Node>> entry : solutions.entrySet()) {
+                    char agentName = entry.getKey();
+                    List<Node> list = entry.getValue();
 
                     if (!list.isEmpty()) {
                         Node n = list.remove(0);
-                        Level.update(Character.forDigit(current++, 10), n.action);
+                        Level.update(agentName, n.action);
                         jointAction += n.action.toString();
                     } else {
                         jointAction += "NoOp";

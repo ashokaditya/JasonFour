@@ -24,7 +24,7 @@ public class Node {
     public int box;
 
     private int g;
-    public Map<Integer, Character> agents = new HashMap<Integer, Character>();
+    public HashMap<Integer, Character> agents = new HashMap<Integer, Character>();
 
     public Node(Node parent) {
         this.parent = parent;
@@ -79,15 +79,18 @@ public class Node {
                 if(this.hasFreeCellAt(newAgentHashCoordinates)) {
                     int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir2);
 
-                    if (this.hasBoxAt(boxHashCoordinates)) {
+                    char agentName = agents.get(agentHashCoordinates);
+
+                    if (this.hasBoxAt(boxHashCoordinates) && Level.sameColor(agentName, getBoxLetter(boxHashCoordinates))) {
                         expandedNodes.add(this.ChildNode(command));
                     }
                 }
             }
             else if(command.actType == Command.type.Push){
                 int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir1);
+                char agentName = agents.get(agentHashCoordinates);
 
-                if(this.hasBoxAt(boxHashCoordinates)){
+                if(this.hasBoxAt(boxHashCoordinates) && Level.sameColor(agentName, getBoxLetter(boxHashCoordinates))){
 
                     int newBoxHashCoordinates = Coordinates.move(boxHashCoordinates, command.dir2);
                     if(this.hasFreeCellAt(newBoxHashCoordinates)){
@@ -250,6 +253,8 @@ public class Node {
         copy.boxesByCharacter = new HashMap<Character, HashSet<Integer>>();
         copy.box = this.box;
         copy.goal = this.goal;
+        copy.agentHashCoordinates = this.agentHashCoordinates;
+        copy.agents = (HashMap<Integer, Character>) this.agents.clone();
 
         for (char c : this.boxesByCharacter.keySet()){
             copy.boxesByCharacter.put(c, (HashSet<Integer>)this.boxesByCharacter.get(c).clone());
@@ -381,7 +386,15 @@ public class Node {
         return boxes.get(boxHashCoordinates);
     }
 
-    public Character getAgent(int agentHashCoordinates) {
+    public Character getAgentName(int agentHashCoordinates) {
         return this.agents.get(agentHashCoordinates);
+    }
+
+    public void addAgent(Integer agentHashCoordinates, Character agentName) {
+        this.agents.put(agentHashCoordinates, agentName);
+    }
+
+    public HashMap<Integer, Character> getAgents() {
+        return agents;
     }
 }

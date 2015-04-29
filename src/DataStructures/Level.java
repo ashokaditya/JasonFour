@@ -1,7 +1,6 @@
 package DataStructures;
 
 import java.util.*;
-import java.util.stream.Collector;
 
 public final class Level {
     private static Set<Integer> walls = new HashSet<Integer>();
@@ -15,7 +14,7 @@ public final class Level {
     private static Map<Integer, Goal> goalsByCoordinates2 = new HashMap<Integer, Goal>();
     private static Map<Character, LinkedList<Goal>> goalsByCharacter2 = new HashMap<Character, LinkedList<Goal>>();
 
-    private static Map<Integer, Character> agents = new HashMap<Integer, Character>();
+//    private static Map<Integer, Character> agents = new HashMap<Integer, Character>();
     private static Map<Character, Integer> agentsByName = new HashMap<Character, Integer>();
 
     private static Node state = new Node(null);
@@ -24,7 +23,7 @@ public final class Level {
     }
 
     public static Map<Integer, Character> getAgents() {
-        return agents;
+        return state.getAgents();
     }
 
     public static Map<Integer, Character> getBoxes(){
@@ -65,8 +64,9 @@ public final class Level {
         }
 
         Integer coordinates = Coordinates.hashCode(row, col);
-        agents.put(coordinates, chr);
+//        agents.put(coordinates, chr);
         agentsByName.put(chr, coordinates);
+        state.addAgent(coordinates, chr);
     }
 
     public static void addBox(int row, int col, char chr) {
@@ -111,6 +111,7 @@ public final class Level {
 
         int agentHashCoordinates = agentsByName.get(agentName);
 
+        state.agentHashCoordinates = agentHashCoordinates;
         state = state.ChildNode(agentHashCoordinates, command);
 
         agentsByName.put(agentName, state.agentHashCoordinates);
@@ -125,7 +126,7 @@ public final class Level {
         }
     }
 
-    public static boolean sameColors(Character object1, Character object2) {
+    public static boolean sameColor(Character object1, Character object2) {
         return colors.get(object1).equals(colors.get(object2));
     }
 
@@ -145,7 +146,7 @@ public final class Level {
 //        return goalsByCharacter.get(goalLetter).pop();
     }
 
-    public static Integer getBoxFor(Character agentName, int goalHashCoordinates){
+    public static Integer getBoxFor(Character agentName, Integer goalHashCoordinates){
         char goalLetter = goalsByCoordinates2.get(goalHashCoordinates).Letter;
 //        char goalLetter = goalsByCoordinates.get(goalHashCoordinates);
         char boxLetter = Character.toUpperCase(goalLetter);
@@ -203,7 +204,7 @@ public final class Level {
     }
 
     private static void moveAgent(int agentHashCoordinates, Command.dir dir) {
-        Character agentName = state.getAgent(agentHashCoordinates);
+        Character agentName = state.getAgentName(agentHashCoordinates);
         int newCoordinates = Coordinates.move(agentHashCoordinates, dir);
         agentsByName.put(agentName, newCoordinates);
 //        agents.put(newCoordinates, agentName);
