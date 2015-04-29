@@ -21,12 +21,22 @@ public final class Level {
     private Level() {
     }
 
-    public static void addWall(int x, int y) {
-        walls.add(Coordinates.hashCode(x, y));
+    public static Map<Integer, Character> getAgents() {
+        return agents;
     }
 
-    public static void addGoal(int x, int y, char goalLetter) {
-        Integer coordinates = Coordinates.hashCode(x, y);
+    public static Map<Integer, Character> getBoxes(){
+        return boxes;
+    }
+
+    public static char getGoal(int row, int col) { return goalsByCoordinates2.get(Coordinates.hashCode(row, col)).Letter; }
+
+    public static void addWall(int row, int col) {
+        walls.add(Coordinates.hashCode(row, col));
+    }
+
+    public static void addGoal(int row, int col, char goalLetter) {
+        Integer coordinates = Coordinates.hashCode(row, col);
 
         Goal goal = new Goal(coordinates, goalLetter, Status.FREE);
 
@@ -77,80 +87,31 @@ public final class Level {
         boxesByCharacter.get(chr).add(hashCoordinates);
     }
 
-    public static boolean hasGoal(int x, int y) {
-        return goalsByCoordinates2.containsKey(Coordinates.hashCode(x, y));
+    public static boolean hasGoal(int row, int col) {
+        return goalsByCoordinates2.containsKey(Coordinates.hashCode(row, col));
     }
 
-    public static boolean hasWall(int x, int y) {
-        return walls.contains(Coordinates.hashCode(x, y));
+    public static boolean hasWall(int row, int col) {
+        return walls.contains(Coordinates.hashCode(row, col));
     }
 
-    public static void update(Character agentName, Command direction){
+    public static void update(Character agentName, Command command){
 
         int agentHashCoordinates = agentsByName.get(agentName);
 
-        moveAgent(agentHashCoordinates, direction.dir1);
-        if(direction.actType == Command.type.Pull){
-            int boxHashCoordinates = GetCoordinates(agentHashCoordinates, direction.dir2);
-            moveBox(boxHashCoordinates, Command.GetOpposite(direction.dir2));
+        moveAgent(agentHashCoordinates, command.dir1);
+        if(command.actType == Command.type.Pull){
+            int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir2);
+            moveBox(boxHashCoordinates, Command.GetOpposite(command.dir2));
         }
-        else if(direction.actType == Command.type.Push){
-            int boxHashCoordinates = GetCoordinates(agentHashCoordinates, direction.dir1);
-            moveBox(boxHashCoordinates, direction.dir2);
-        }
-    }
-
-    private static void moveBox(int boxHashCoordinates, Command.dir dir) {
-        Character boxLetter = boxes.remove(boxHashCoordinates);
-        boxesByCharacter.get(boxLetter).removeFirstOccurrence(boxHashCoordinates);
-
-        int newCoordinates = GetCoordinates(boxHashCoordinates, dir);
-        boxesByCharacter.get(boxLetter).add(newCoordinates);
-        boxes.put(newCoordinates, boxLetter);
-        takenBoxes.remove(boxHashCoordinates);
-        takenBoxes.add(newCoordinates);
-
-        // set as satisfied if a box is moved to the goal
-        if(goalsByCoordinates2.containsKey(newCoordinates) &&
-                goalsByCoordinates2.get(newCoordinates).Letter.equals(Character.toLowerCase(boxLetter))){
-            goalsByCoordinates2.get(newCoordinates).Status = Status.SATISFIED;
+        else if(command.actType == Command.type.Push){
+            int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir1);
+            moveBox(boxHashCoordinates, command.dir2);
         }
     }
-
-    private static void moveAgent(int agentHashCoordinates, Command.dir dir) {
-        Character agentName = agents.remove(agentHashCoordinates);
-        int newCoordinates = GetCoordinates(agentHashCoordinates, dir);
-        agentsByName.put(agentName, newCoordinates);
-        agents.put(newCoordinates, agentName);
-    }
-
-    //TODO: could be done faster
-    private static int GetCoordinates(int agentHashCoordinates, Command.dir direction) {
-        Coordinates agent = new Coordinates(agentHashCoordinates);
-        if(direction == Command.dir.E){
-            return new Coordinates(agent.getRow(), agent.getCol()+1).hashCode();
-        }
-        if(direction == Command.dir.W){
-            return new Coordinates(agent.getRow(), agent.getCol()-1).hashCode();
-        }
-        if(direction == Command.dir.N){
-            return new Coordinates(agent.getRow()-1, agent.getCol()).hashCode();
-        }
-        return new Coordinates(agent.getRow()+1, agent.getCol()).hashCode();
-    }
-
-    public static char getGoal(int x, int y) { return goalsByCoordinates2.get(Coordinates.hashCode(x, y)).Letter; }
 
     public static boolean sameColors(Character object1, Character object2) {
         return colors.get(object1).equals(colors.get(object2));
-    }
-
-    public static Map<Integer, Character> getAgents() {
-        return agents;
-    }
-
-    public static Map<Integer, Character> getBoxes(){
-        return boxes;
     }
 
     public static Integer getGoalFor(Character agentName){
@@ -209,4 +170,27 @@ public final class Level {
         return goals;
     }
 
+    private static void moveBox(int boxHashCoordinates, Command.dir dir) {
+        Character boxLetter = boxes.remove(boxHashCoordinates);
+        boxesByCharacter.get(boxLetter).removeFirstOccurrence(boxHashCoordinates);
+
+        int newCoordinates = Coordinates.move(boxHashCoordinates, dir);
+        boxesByCharacter.get(boxLetter).add(newCoordinates);
+        boxes.put(newCoordinates, boxLetter);
+        takenBoxes.remove(boxHashCoordinates);
+        takenBoxes.add(newCoordinates);
+
+        // set as satisfied if a box is moved to the goal
+        if(goalsByCoordinates2.containsKey(newCoordinates) &&
+                goalsByCoordinates2.get(newCoordinates).Letter.equals(Character.toLowerCase(boxLetter))){
+            goalsByCoordinates2.get(newCoordinates).Status = Status.SATISFIED;
+        }
+    }
+
+    private static void moveAgent(int agentHashCoordinates, Command.dir dir) {
+        Character agentName = agents.remove(agentHashCoordinates);
+        int newCoordinates = Coordinates.move(agentHashCoordinates, dir);
+        agentsByName.put(agentName, newCoordinates);
+        agents.put(newCoordinates, agentName);
+    }
 }

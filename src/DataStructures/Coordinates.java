@@ -7,6 +7,7 @@ public class Coordinates {
 
     //log(MAX_COL) should be less than offset
     private final static int offset = 7;
+    private final static int hashOffsetPerRow = 1 << offset;
 
     public Coordinates(Integer hashCode) {
         this.hashCode = hashCode;
@@ -55,5 +56,18 @@ public class Coordinates {
         int targetCol = targetHash - (targetRow << offset);
 
         return Math.abs(sourceRow - targetRow) + Math.abs(sourceCol - targetCol);
+    }
+
+    public static int move(int agentHashCoordinates, Command.dir direction) {
+        if(direction == Command.dir.E){
+            return agentHashCoordinates + 1;
+        }
+        if(direction == Command.dir.W){
+            return agentHashCoordinates - 1;
+        }
+        if(direction == Command.dir.N){
+            return agentHashCoordinates - hashOffsetPerRow;
+        }
+        return agentHashCoordinates + hashOffsetPerRow;
     }
 }
