@@ -21,7 +21,7 @@ public abstract class Heuristic implements Comparator<Node> {
     public int h(Node n) {
 
         int h = Coordinates.manhattanDistance(n.box, n.goal) +
-                Coordinates.manhattanDistance(Coordinates.hashCode(n.agentRow, n.agentCol), n.box);
+                Coordinates.manhattanDistance(n.agentHashCoordinates, n.box) - 1;
         return h;
 
 //        int totalDistance = 0;

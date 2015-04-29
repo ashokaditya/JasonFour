@@ -7,9 +7,9 @@ public final class Level {
     private static Set<Integer> walls = new HashSet<Integer>();
     private static Map<Character, Color> colors = new HashMap<Character, Color>();
 
-    private static Map<Integer, Character> boxes = new HashMap<Integer, Character>();
+//    private static Map<Integer, Character> boxes = new HashMap<Integer, Character>();
 //    private static Map<Color, LinkedList<Integer>> boxesByColor = new HashMap<Color, LinkedList<Integer>>();
-    private static Map<Character, LinkedList<Integer>> boxesByCharacter = new HashMap<Character, LinkedList<Integer>>();
+//    private static Map<Character, LinkedList<Integer>> boxesByCharacter = new HashMap<Character, LinkedList<Integer>>();
     private static Set<Integer> takenBoxes = new HashSet<Integer>();
 
     private static Map<Integer, Goal> goalsByCoordinates2 = new HashMap<Integer, Goal>();
@@ -17,6 +17,8 @@ public final class Level {
 
     private static Map<Integer, Character> agents = new HashMap<Integer, Character>();
     private static Map<Character, Integer> agentsByName = new HashMap<Character, Integer>();
+
+    private static Node state = new Node(null);
 
     private Level() {
     }
@@ -26,7 +28,7 @@ public final class Level {
     }
 
     public static Map<Integer, Character> getBoxes(){
-        return boxes;
+        return state.getBoxes();
     }
 
     public static char getGoal(int row, int col) { return goalsByCoordinates2.get(Coordinates.hashCode(row, col)).Letter; }
@@ -69,26 +71,36 @@ public final class Level {
 
     public static void addBox(int row, int col, char chr) {
         Integer hashCoordinates = Coordinates.hashCode(row, col);
-        boxes.put(hashCoordinates, chr);
-
+//        boxes.put(hashCoordinates, chr);
+//
         if(!colors.containsKey(chr)){
             colors.put(chr, Color.BLUE);
         }
 
-//        Color boxColor = colors.get(chr);
-
-//        if(!boxesByColor.containsKey(boxColor)){
-//            boxesByColor.put(boxColor, new LinkedList<Integer>());
+////        Color boxColor = colors.get(chr);
+//
+////        if(!boxesByColor.containsKey(boxColor)){
+////            boxesByColor.put(boxColor, new LinkedList<Integer>());
+////        }
+//        if(!boxesByCharacter.containsKey(chr)){
+//            boxesByCharacter.put(chr, new LinkedList<Integer>());
 //        }
-        if(!boxesByCharacter.containsKey(chr)){
-            boxesByCharacter.put(chr, new LinkedList<Integer>());
-        }
-//        boxesByColor.get(boxColor).add(hashCoordinates);
-        boxesByCharacter.get(chr).add(hashCoordinates);
+////        boxesByColor.get(boxColor).add(hashCoordinates);
+//        boxesByCharacter.get(chr).add(hashCoordinates);
+
+        state.addBox(hashCoordinates, chr);
     }
 
     public static boolean hasGoal(int row, int col) {
         return goalsByCoordinates2.containsKey(Coordinates.hashCode(row, col));
+    }
+
+    public static boolean hasGoal(int goalHashCoordinates) {
+        return goalsByCoordinates2.containsKey(goalHashCoordinates);
+    }
+
+    public static boolean hasWall(int wallHashCoordinate) {
+        return walls.contains(wallHashCoordinate);
     }
 
     public static boolean hasWall(int row, int col) {
@@ -99,7 +111,10 @@ public final class Level {
 
         int agentHashCoordinates = agentsByName.get(agentName);
 
-        moveAgent(agentHashCoordinates, command.dir1);
+        state = state.ChildNode(agentHashCoordinates, command);
+
+        agentsByName.put(agentName, state.agentHashCoordinates);
+//        moveAgent(agentHashCoordinates, command.dir1);
         if(command.actType == Command.type.Pull){
             int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir2);
             moveBox(boxHashCoordinates, Command.GetOpposite(command.dir2));
@@ -136,7 +151,7 @@ public final class Level {
         char boxLetter = Character.toUpperCase(goalLetter);
 
         //TODO: get suitable box instead
-        for(int boxHashCoordinates : boxesByCharacter.get(boxLetter)){
+        for(int boxHashCoordinates : state.getBoxes(boxLetter)){
             if(!takenBoxes.contains(boxHashCoordinates)){
                 takenBoxes.add(boxHashCoordinates);
                 return boxHashCoordinates;
@@ -171,15 +186,15 @@ public final class Level {
     }
 
     private static void moveBox(int boxHashCoordinates, Command.dir dir) {
-        Character boxLetter = boxes.remove(boxHashCoordinates);
-        boxesByCharacter.get(boxLetter).removeFirstOccurrence(boxHashCoordinates);
-
+//        boxesByCharacter.get(boxLetter).removeFirstOccurrence(boxHashCoordinates);
+//
         int newCoordinates = Coordinates.move(boxHashCoordinates, dir);
-        boxesByCharacter.get(boxLetter).add(newCoordinates);
-        boxes.put(newCoordinates, boxLetter);
+//        boxesByCharacter.get(boxLetter).add(newCoordinates);
+//        boxes.put(newCoordinates, boxLetter);
         takenBoxes.remove(boxHashCoordinates);
         takenBoxes.add(newCoordinates);
 
+        Character boxLetter = state.getBoxLetter(newCoordinates);
         // set as satisfied if a box is moved to the goal
         if(goalsByCoordinates2.containsKey(newCoordinates) &&
                 goalsByCoordinates2.get(newCoordinates).Letter.equals(Character.toLowerCase(boxLetter))){
@@ -188,9 +203,9 @@ public final class Level {
     }
 
     private static void moveAgent(int agentHashCoordinates, Command.dir dir) {
-        Character agentName = agents.remove(agentHashCoordinates);
+        Character agentName = state.getAgent(agentHashCoordinates);
         int newCoordinates = Coordinates.move(agentHashCoordinates, dir);
         agentsByName.put(agentName, newCoordinates);
-        agents.put(newCoordinates, agentName);
+//        agents.put(newCoordinates, agentName);
     }
 }

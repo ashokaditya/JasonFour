@@ -9,6 +9,7 @@ public class Node {
 
     public int agentRow;
     public int agentCol;
+    public int agentHashCoordinates;
 
     public Node parent;
     public Command action;
@@ -61,55 +62,84 @@ public class Node {
 
     public ArrayList<Node> getExpandedNodes() {
         ArrayList<Node> expandedNodes = new ArrayList<Node>(Command.every.length);
-        for (Command c : Command.every) {
+        for (Command command : Command.every) {
             // Determine applicability of action
-            int newAgentRow = this.agentRow + dirToRowChange(c.dir1);
-            int newAgentCol = this.agentCol + dirToColChange(c.dir1);
+//            int newAgentRow = this.agentRow + dirToRowChange(command.dir1);
+//            int newAgentCol = this.agentCol + dirToColChange(command.dir1);
 
-            if (c.actType == Command.type.Move) {
-                // Check if there's a wall or box on the cell to which the agent is moving
-                if (this.hasFreeCellAt(newAgentRow, newAgentCol)) {
-                    Node n = this.ChildNode();
-                    n.action = c;
-                    n.agentRow = newAgentRow;
-                    n.agentCol = newAgentCol;
-                    expandedNodes.add(n);
+            int newAgentHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir1);
+
+            if(command.actType == Command.type.Move){
+                if(this.hasFreeCellAt(newAgentHashCoordinates)){
+                    expandedNodes.add(this.ChildNode(command));
                 }
-            } else if (c.actType == Command.type.Push) {
-                // Make sure that there's actually a box to move
-                if (this.hasBoxAt(newAgentRow, newAgentCol)) {
-                    int newBoxRow = newAgentRow + dirToRowChange(c.dir2);
-                    int newBoxCol = newAgentCol + dirToColChange(c.dir2);
-                    // .. and that new cell of box is free
-                    if (this.hasFreeCellAt(newBoxRow, newBoxCol)) {
+            }
+            else if(command.actType == Command.type.Pull){
 
-                        // .. and it's of this agent's color
+                if(this.hasFreeCellAt(newAgentHashCoordinates)) {
+                    int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir2);
 
-                        Node n = this.ChildNode();
-                        n.action = c;
-                        n.moveAgent(newAgentRow, newAgentCol);
-                        n.moveBox(newAgentRow, newAgentCol, newBoxRow, newBoxCol);
-                        expandedNodes.add(n);
-                    }
-                }
-            } else if (c.actType == Command.type.Pull) {
-                // Cell is free where agent is going
-                if (hasFreeCellAt(newAgentRow, newAgentCol)) {
-                    int boxRow = this.agentRow + dirToRowChange(c.dir2);
-                    int boxCol = this.agentCol + dirToColChange(c.dir2);
-                    // .. and there's a box in "dir2" of the agent
-                    if (this.hasBoxAt(boxRow, boxCol)) {
-
-                        // .. and is in this agent's color
-
-                        Node n = this.ChildNode();
-                        n.action = c;
-                        n.moveAgent(newAgentRow, newAgentCol);
-                        n.moveBox(boxRow, boxCol, this.agentRow, this.agentCol);
-                        expandedNodes.add(n);
+                    if (this.hasBoxAt(boxHashCoordinates)) {
+                        expandedNodes.add(this.ChildNode(command));
                     }
                 }
             }
+            else if(command.actType == Command.type.Push){
+                int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir1);
+
+                if(this.hasBoxAt(boxHashCoordinates)){
+
+                    int newBoxHashCoordinates = Coordinates.move(boxHashCoordinates, command.dir2);
+                    if(this.hasFreeCellAt(newBoxHashCoordinates)){
+                        expandedNodes.add(this.ChildNode(command));
+                    }
+                }
+            }
+
+//            if (command.actType == Command.type.Move) {
+//                // Check if there's a wall or box on the cell to which the agent is moving
+//                if (this.hasFreeCellAt(newAgentRow, newAgentCol)) {
+//                    Node n = this.ChildNode();
+//                    n.action = command;
+//                    n.agentRow = newAgentRow;
+//                    n.agentCol = newAgentCol;
+//                    expandedNodes.add(n);
+//                }
+//            } else if (command.actType == Command.type.Push) {
+//                // Make sure that there's actually a box to move
+//                if (this.hasBoxAt(newAgentRow, newAgentCol)) {
+//                    int newBoxRow = newAgentRow + dirToRowChange(command.dir2);
+//                    int newBoxCol = newAgentCol + dirToColChange(command.dir2);
+//                    // .. and that new cell of box is free
+//                    if (this.hasFreeCellAt(newBoxRow, newBoxCol)) {
+//
+//                        // .. and it's of this agent's color
+//
+//                        Node n = this.ChildNode();
+//                        n.action = command;
+//                        n.moveAgent(newAgentRow, newAgentCol);
+//                        n.moveBox(newAgentRow, newAgentCol, newBoxRow, newBoxCol);
+//                        expandedNodes.add(n);
+//                    }
+//                }
+//            } else if (command.actType == Command.type.Pull) {
+//                // Cell is free where agent is going
+//                if (hasFreeCellAt(newAgentRow, newAgentCol)) {
+//                    int boxRow = this.agentRow + dirToRowChange(command.dir2);
+//                    int boxCol = this.agentCol + dirToColChange(command.dir2);
+//                    // .. and there's a box in "dir2" of the agent
+//                    if (this.hasBoxAt(boxRow, boxCol)) {
+//
+//                        // .. and is in this agent's color
+//
+//                        Node n = this.ChildNode();
+//                        n.action = command;
+//                        n.moveAgent(newAgentRow, newAgentCol);
+//                        n.moveBox(boxRow, boxCol, this.agentRow, this.agentCol);
+//                        expandedNodes.add(n);
+//                    }
+//                }
+//            }
         }
 //        Collections.shuffle(expandedNodes, rnd);
         return expandedNodes;
@@ -135,14 +165,53 @@ public class Node {
         agentCol = newAgentY;
     }
 
+    private int moveBox(int boxHashCoordinates, Command.dir direction){
+        Character boxLetter = this.boxes.remove(boxHashCoordinates);
+        this.boxesByCharacter.get(boxLetter).remove(boxHashCoordinates);
+
+        int newCoordinates = Coordinates.move(boxHashCoordinates, direction);
+        this.boxesByCharacter.get(boxLetter).add(newCoordinates);
+        this.boxes.put(newCoordinates, boxLetter);
+
+        if(this.box == boxHashCoordinates){
+            this.box = newCoordinates;
+        }
+
+//        takenBoxes.remove(boxHashCoordinates);
+//        takenBoxes.add(newCoordinates);
+
+        // set as satisfied if a box is moved to the goal
+//        if(goalsByCoordinates2.containsKey(newCoordinates) &&
+//                goalsByCoordinates2.get(newCoordinates).Letter.equals(Character.toLowerCase(boxLetter))){
+//            goalsByCoordinates2.get(newCoordinates).Status = Status.SATISFIED;
+//        }
+
+        return newCoordinates;
+    }
+
+    private void moveAgent(int agentHashCoordinates, Command.dir dir) {
+        Character agentName = agents.remove(agentHashCoordinates);
+        int newCoordinates = Coordinates.move(agentHashCoordinates, dir);
+        this.agentHashCoordinates = newCoordinates;
+//        agentsByName.put(agentName, newCoordinates);
+        agents.put(newCoordinates, agentName);
+    }
+
+    private boolean hasFreeCellAt(int cellHashCoordinates) {
+        //TODO: add agent
+        return (!Level.hasWall(cellHashCoordinates) && !this.hasBoxAt(cellHashCoordinates));
+    }
+
     private boolean hasFreeCellAt(int row, int col) {
         //TODO: add agent
-
         return (!Level.hasWall(row, col) && !this.hasBoxAt(row, col));
     }
 
-    private boolean hasBoxAt(int x, int y) {
+    private boolean hasBoxAt(int boxHashCoordinate) {
+        return boxes.containsKey(boxHashCoordinate);
+    }
 
+    private boolean hasBoxAt(int x, int y) {
         return boxes.containsKey(Coordinates.hashCode(x, y));
     }
 
@@ -152,6 +221,26 @@ public class Node {
 
     private int dirToColChange(Command.dir d) {
         return (d == Command.dir.E ? 1 : (d == Command.dir.W ? -1 : 0)); // East is left one column (1), west is right one column (-1)
+    }
+
+    public Node ChildNode(Command command){
+        return ChildNode(this.agentHashCoordinates, command);
+    }
+
+    public Node ChildNode(int agentHashCoordinates, Command command) {
+        Node childNode = this.ChildNode();
+        childNode.action = command;
+        childNode.moveAgent(agentHashCoordinates, command.dir1);
+        if(command.actType == Command.type.Pull){
+            int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir2);
+            childNode.moveBox(boxHashCoordinates, Command.GetOpposite(command.dir2));
+        }
+        else if(command.actType == Command.type.Push){
+            int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir1);
+            childNode.moveBox(boxHashCoordinates, command.dir2);
+        }
+
+        return childNode;
     }
 
     private Node ChildNode() {
@@ -186,8 +275,10 @@ public class Node {
 
         final int prime = 31;
         int result = 1;
-        result = prime * result + agentCol;
-        result = prime * result + agentRow;
+        result = prime * result + agentHashCoordinates;
+        result = prime * result + box;
+//        result = prime * result + agentCol;
+//        result = prime * result + agentRow;
         for(Integer x : this.boxes.keySet()){
             result = prime * result + x.hashCode();
         }
@@ -207,10 +298,15 @@ public class Node {
         if (getClass() != obj.getClass())
             return false;
         Node other = (Node) obj;
-        if (agentCol != other.agentCol)
+        if(agentHashCoordinates != other.agentHashCoordinates)
             return false;
-        if (agentRow != other.agentRow)
+        if(box != other.box){
             return false;
+        }
+//        if (agentCol != other.agentCol)
+//            return false;
+//        if (agentRow != other.agentRow)
+//            return false;
         //TODO: does it work ?
         if (!boxes.equals(other.boxes)) {
             return false;
@@ -263,6 +359,10 @@ public class Node {
         }
     }
 
+    public HashMap<Integer, Character> getBoxes() {
+        return this.boxes;
+    }
+
     public HashSet<Integer> getBoxes(char boxLetter) {
         return this.boxesByCharacter.get(Character.toUpperCase(boxLetter));
     }
@@ -275,5 +375,13 @@ public class Node {
     public void addBox(Integer key, Character value) {
         Coordinates coord = new Coordinates(key);
         addBox(coord.getRow(), coord.getCol(), value);
+    }
+
+    public Character getBoxLetter(int boxHashCoordinates) {
+        return boxes.get(boxHashCoordinates);
+    }
+
+    public Character getAgent(int agentHashCoordinates) {
+        return this.agents.get(agentHashCoordinates);
     }
 }
