@@ -1,7 +1,6 @@
 package Heuristics;
 
 import DataStructures.Coordinates;
-import DataStructures.Level;
 import DataStructures.Node;
 
 import java.util.*;
@@ -19,33 +18,28 @@ public abstract class Heuristic implements Comparator<Node> {
     }
 
     public int h(Node n) {
+        int agentHashCoordinates = Coordinates.hashCode(n.agentRow, n.agentCol);
 
-        int h = Coordinates.manhattanDistance(n.box, n.goal) +
-                Coordinates.manhattanDistance(n.agentHashCoordinates, n.box) - 1;
-        return h;
+        int h = Coordinates.manhattanDistance(n.box, n.goal)+ Coordinates.manhattanDistance(agentHashCoordinates, n.box);
 
-//        int totalDistance = 0;
-//        int minDistance = Integer.MAX_VALUE;
-//
-//        for (Character goalLetter : Level.getGoals()) {
-//            for (Integer boxHash : n.getBoxes(goalLetter)) {
-//                for(Integer goalHash : Level.getGoalCoordinates(goalLetter)){
-//
-////                    Coordinates boxCoordinates = new Coordinates(boxHash);
-////                    Coordinates goalCoordinates = new Coordinates(goalHash);
-//
-////                    int distance = boxCoordinates.manhattanDistanceTo(goalCoordinates);
-//                    int distance = Coordinates.manhattanDistance(boxHash, goalHash);
-//                    if (distance < minDistance) {
-//                        minDistance = distance;
-//                    }
-//                }
-//            }
-//
-//            totalDistance += minDistance;
-//        }
-//
-//        return totalDistance;
+        Set<Character> allLetters = initialState.getAllBoxLetters();
+
+        int counter = 0;
+
+        for (Character letter : allLetters){
+            Set<Integer> coordinatesForLetter = initialState.getBoxes(letter);
+
+            for (Integer coordinates : coordinatesForLetter){
+                if(!n.getBoxes(letter).contains(coordinates)){
+                    counter++;
+                }
+            }
+        }
+
+        if(initialState.box != n.box){
+            counter--;
+        }
+        return h + counter*12;
     }
 
     public abstract int f(Node n);

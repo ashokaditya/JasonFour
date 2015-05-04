@@ -201,8 +201,11 @@ public class Node {
     }
 
     private boolean hasFreeCellAt(int cellHashCoordinates) {
-        //TODO: add agent
-        return (!Level.hasWall(cellHashCoordinates) && !this.hasBoxAt(cellHashCoordinates));
+        return (!Level.hasWall(cellHashCoordinates) && !this.hasBoxAt(cellHashCoordinates) && !this.hasAgentAt(cellHashCoordinates));
+    }
+
+    private boolean hasAgentAt(int cellHashCoordinates) {
+        return agents.containsKey(cellHashCoordinates);
     }
 
     private boolean hasFreeCellAt(int row, int col) {
@@ -370,6 +373,10 @@ public class Node {
 
     public HashSet<Integer> getBoxes(char boxLetter) {
         return this.boxesByCharacter.get(Character.toUpperCase(boxLetter));
+    }
+
+    public Set<Character> getAllBoxLetters(){
+        return boxesByCharacter.keySet();
     }
 
     public void setDedicatedGoal(Integer boxHashCoordinates, Integer goalHashCoordinates){

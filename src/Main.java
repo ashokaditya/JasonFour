@@ -21,23 +21,7 @@ public class Main {
     public static boolean fromFile = false;
 
     public static void main(String[] args) throws Exception {
-        BufferedReader serverMessages = new BufferedReader(new InputStreamReader(System.in));
-        if(args.length >= 1){
-            for(String arg : args){
-                if (arg.startsWith("-file=")){
-                    serverMessages = new BufferedReader(new FileReader(arg.replace("-file=", "")));
-
-                    fromFile = true;
-
-                    System.setErr(new PrintStream(new OutputStream() {
-                        public void write(int b) {
-                        }
-                    }));
-
-                    break;
-                }
-            }
-        }
+        BufferedReader serverMessages = getInputSource(args);
 
         // Use stderr to print to console
 //        System.err.println("SearchClient initializing. I am sending this using the error output stream.");
@@ -110,7 +94,6 @@ public class Main {
                 String jointAction = "[";
 
                 int i = 0;
-                Integer current = 0;
                 for (Map.Entry<Character, List<Node>> entry : solutions.entrySet()) {
                     char agentName = entry.getKey();
                     List<Node> list = entry.getValue();
@@ -141,6 +124,27 @@ public class Main {
 //                }
             }
         }
+    }
+
+    private static BufferedReader getInputSource(String[] args) throws FileNotFoundException {
+        BufferedReader serverMessages = new BufferedReader(new InputStreamReader(System.in));
+        if(args.length >= 1){
+            for(String arg : args){
+                if (arg.startsWith("-file=")){
+                    serverMessages = new BufferedReader(new FileReader(arg.replace("-file=", "")));
+
+                    fromFile = true;
+
+                    System.setErr(new PrintStream(new OutputStream() {
+                        public void write(int b) {
+                        }
+                    }));
+
+                    break;
+                }
+            }
+        }
+        return serverMessages;
     }
 
     private static void ReadInput(BufferedReader serverMessages) throws IOException {
