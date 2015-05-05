@@ -1,3 +1,4 @@
+import DataStructures.Memory;
 import DataStructures.Node;
 import Strategies.Strategy;
 import java.io.IOException;
@@ -17,7 +18,7 @@ public class SearchClient {
     }
 
     public LinkedList<Node> Search(Strategy strategy) throws IOException {
-        System.err.format("Search starting with strategy %s\n", strategy);
+//        System.err.format("Search starting with strategy %s\n", strategy);
         strategy.addToFrontier(this.initialState);
 
         int iterations = 0;

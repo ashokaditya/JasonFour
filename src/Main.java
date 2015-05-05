@@ -13,124 +13,168 @@ import Strategies.StrategyDFS;
 import java.io.*;
 import java.util.*;
 
-/**
- * Created by Administrator on 4/10/2015.
- */
 public class Main {
 
-    public static boolean fromFile = false;
+    private static boolean fromFile = false;
+
+    private static int[] countFrontier = new int[10];
+    private static int[] countExplored = new int[10];
+    private static int totalSolutionLength;
 
     public static void main(String[] args) throws Exception {
-        BufferedReader serverMessages = getInputSource(args);
-
-        // Use stderr to print to console
-//        System.err.println("SearchClient initializing. I am sending this using the error output stream.");
+        BufferedReader serverMessages = GetInputSource(args);
 
         // Read level and create the initial state of the problem
         ReadInput(serverMessages);
 
         HashMap<Character, List<Node>> solutions = new HashMap<Character, List<Node>>();
 
-        for (Map.Entry<Integer, Character> entry : Level.getAgents().entrySet()) {
-            char agentName = entry.getValue();
-            int agentHashCoordinates = entry.getKey();
+        while (!Level.AreGoalsSatisfied()) {
 
-            Node initialState = new Node(null);
+            for (Character agentName : Level.getAgentNames()) {
+                if (Level.isAgentFree(agentName)) {
 
-            Coordinates agentCoordinates = new Coordinates(agentHashCoordinates);
-            initialState.agentRow = agentCoordinates.getRow();
-            initialState.agentCol = agentCoordinates.getCol();
-            initialState.agentHashCoordinates = agentHashCoordinates;
+                    Level.setAgentBusy(agentName);
 
-            Integer goal = Level.getGoalFor(agentName);
-            Integer box = Level.getBoxFor(agentName, goal);
+                    List<Node> agentPlan = CreatePlan(agentName, args);
 
-            for (Map.Entry<Integer, Character> entry2 : Level.getBoxes().entrySet()) {
-                initialState.addBox(entry2.getKey(), entry2.getValue());
-            }
-
-            for(Map.Entry<Integer, Character> entry2 : Level.getAgents().entrySet()) {
-                initialState.addAgent(entry2.getKey(), entry2.getValue());
-            }
-
-            initialState.setDedicatedGoal(box, goal);
-
-            Strategy str = getStrategy(initialState, args);
-            SearchClient client = new SearchClient(initialState);
-            solutions.put(initialState.getAgentName(agentHashCoordinates), client.Search(str));
-            if (fromFile) {
-                System.out.format("Explored for agent \"%c\": %d", agentName,  str.explored.size());
-                System.out.println();
-                System.out.format("Frontier for agent \"%c\": %d", agentName, str.countFrontier());
-                System.out.println();
-            }
-        }
-
-        Boolean solved = false;
-        int solutionLength = 0;
-        for (List<Node> list : solutions.values()) {
-            if (list != null) {
-                solved = true;
-                if (list.size() > solutionLength) {
-                    solutionLength = list.size();
-                }
-            }
-        }
-        if (solved == false) {
-            System.err.println("Unable to solve level");
-            System.exit(0);
-        } else {
-            if(fromFile) {
-                System.out.println("Found solution of length " + solutionLength);
-            }
-            else {
-//                System.err.println();
-//                System.err.println("Summary for " + strategy);
-                System.err.println("Found solution of length " + solutionLength);
-//                System.err.println(strategy.searchStatus());
-            }
-
-            for (int j = 0; j < solutionLength; j++) {
-                String jointAction = "[";
-
-                int i = 0;
-                for (Map.Entry<Character, List<Node>> entry : solutions.entrySet()) {
-                    char agentName = entry.getKey();
-                    List<Node> list = entry.getValue();
-
-                    if (!list.isEmpty()) {
-                        Node n = list.remove(0);
-                        Level.update(agentName, n.action);
-                        jointAction += n.action.toString();
-                    } else {
-                        jointAction += "NoOp";
+                    //if there is no solution or no goals
+                    if (agentPlan == null) {
+                        Level.setAgentFree(agentName);
                     }
 
-                    if (i + 1 != solutions.size()) {
-                        jointAction += ",";
-                    }
-                    i++;
+                    solutions.put(agentName, agentPlan);
                 }
+            }
 
-                jointAction += "]";
-                if(!Main.fromFile){
-                    System.out.println(jointAction);
-                }
-//                String response = serverMessages.readLine();
-//                if (response.contains("false")) {
-//                    System.err.format("Server responsed with %s to the inapplicable action: %s\n", response, jointAction);
-//                    System.err.format("%s was attempted in \n%s\n", jointAction, n);
-//                    break;
+            ExecutePlans(solutions);
+        }
+
+        PrintTotals();
+    }
+
+    private static List<Node> CreatePlan(Character agentName, String[] args) throws IOException {
+        int agentHashCoordinates = Level.getAgents().get(agentName);
+
+        Node initialState = new Node(null);
+
+        Coordinates agentCoordinates = new Coordinates(agentHashCoordinates);
+        initialState.agentRow = agentCoordinates.getRow();
+        initialState.agentCol = agentCoordinates.getCol();
+        initialState.agentHashCoordinates = agentHashCoordinates;
+
+        Integer goal = Level.getGoalFor(agentName);
+        if (goal == -1) {
+            return null;
+        }
+        Integer box = Level.getBoxFor(agentName, goal);
+
+        for (Map.Entry<Integer, Character> entry2 : Level.getBoxes().entrySet()) {
+            initialState.addBox(entry2.getKey(), entry2.getValue());
+        }
+
+        for (Map.Entry<Character, Integer> entry2 : Level.getAgents().entrySet()) {
+            initialState.addAgent(entry2.getValue(), entry2.getKey());
+        }
+
+        initialState.setDedicatedGoal(box, goal);
+
+        SearchClient client = new SearchClient(initialState);
+        Strategy strategy = getStrategy(initialState, args);
+        List<Node> solution = client.Search(strategy);
+
+        countExplored[agentName - '0'] += strategy.explored.size();
+        countFrontier[agentName - '0'] += strategy.countFrontier();
+
+        return solution;
+    }
+
+    private static void ExecutePlans(HashMap<Character, List<Node>> solutions) {
+
+//        Boolean solved = false;
+//        int solutionLength = 0;
+//        for (List<Node> list : solutions.values()) {
+//            if (list != null) {
+//                solved = true;
+//                if (list.size() > solutionLength) {
+//                    solutionLength = list.size();
 //                }
+//            }
+//        }
+//        if (!solved) {
+//            System.err.println("Unable to solve level");
+//            System.exit(0);
+//        } else {
+        Boolean needReplan = false;
+
+        while (!needReplan) {
+            List<String> jointAction = new LinkedList<String>();
+
+            for (char agentName : Level.getAgentNames()) {
+                List<Node> list = solutions.get(agentName);
+
+                if (list != null && !list.isEmpty()) {
+                    Node n = list.remove(0);
+                    Level.update(agentName, n.action);
+                    jointAction.add(n.action.toString());
+                } else {
+                    jointAction.add("NoOp");
+                    needReplan = true;
+                    Level.setAgentFree(agentName);
+                    Level.setBoxFree(agentName);
+                }
             }
+
+            totalSolutionLength++;
+
+            if (!fromFile) {
+                System.out.format("[%s]\n", String.join(",", jointAction));
+            }
+
+            //                String response = serverMessages.readLine();
+            //                if (response.contains("false")) {
+            //                    System.err.format("Server responsed with %s to the inapplicable action: %s\n", response, jointAction);
+            //                    System.err.format("%s was attempted in \n%s\n", jointAction, n);
+            //                    break;
+            //                }
+//            }
         }
     }
 
-    private static BufferedReader getInputSource(String[] args) throws FileNotFoundException {
+    private static Strategy getStrategy(Node initialState, String[] commandLineArguments) {
+        if (commandLineArguments.length >= 1) {
+            String alg = "astar";
+            for (String cmdParameter : commandLineArguments) {
+                if (cmdParameter.startsWith("-alg=")) {
+                    alg = cmdParameter.replace("-alg=", "");
+                    break;
+                }
+            }
+
+            if (alg.equalsIgnoreCase("dfs")) {
+                return new StrategyDFS();
+            } else if (alg.equalsIgnoreCase("bfs")) {
+                return new StrategyBFS();
+            } else if (alg.equalsIgnoreCase("astar")) {
+                return new StrategyBestFirst(new AStar(initialState));
+            } else if (alg.equalsIgnoreCase("wastar")) {
+                return new StrategyBestFirst(new WeightedAStar(initialState));
+            } else if (alg.equalsIgnoreCase("greedy")) {
+                return new StrategyBestFirst(new Greedy(initialState));
+            } else {
+                System.err.println("Unrecognized strategy - " + alg + ". Try with - DFS, BFS, AStar, WAStar, Greedy");
+                System.exit(0);
+            }
+        }
+
+        return new StrategyBestFirst(new AStar(initialState));
+    }
+
+    private static BufferedReader GetInputSource(String[] args) throws FileNotFoundException {
         BufferedReader serverMessages = new BufferedReader(new InputStreamReader(System.in));
-        if(args.length >= 1){
-            for(String arg : args){
-                if (arg.startsWith("-file=")){
+        if (args.length >= 1) {
+            for (String arg : args) {
+                if (arg.startsWith("-file=")) {
                     serverMessages = new BufferedReader(new FileReader(arg.replace("-file=", "")));
 
                     fromFile = true;
@@ -183,32 +227,22 @@ public class Main {
         }
     }
 
-    private static Strategy getStrategy(Node initialState, String[] commandLineArguments) {
-        if (commandLineArguments.length >= 1) {
-            String alg = "astar";
-            for (String cmdParameter : commandLineArguments) {
-                if (cmdParameter.startsWith("-alg=")) {
-                    alg = cmdParameter.replace("-alg=", "");
-                    break;
-                }
-            }
+    private static void PrintTotals() {
 
-            if (alg.equalsIgnoreCase("dfs")) {
-                return new StrategyDFS();
-            } else if (alg.equalsIgnoreCase("bfs")) {
-                return new StrategyBFS();
-            } else if (alg.equalsIgnoreCase("astar")) {
-                return new StrategyBestFirst(new AStar(initialState));
-            } else if (alg.equalsIgnoreCase("wastar")) {
-                return new StrategyBestFirst(new WeightedAStar(initialState));
-            } else if (alg.equalsIgnoreCase("greedy")) {
-                return new StrategyBestFirst(new Greedy(initialState));
-            } else {
-                System.err.println("Unrecognized strategy - " + alg + ". Try with - DFS, BFS, AStar, WAStar, Greedy");
-                System.exit(0);
-            }
+        PrintStream printStream;
+
+        if(fromFile){
+            printStream = System.out;
+        }
+        else{
+            printStream = System.err;
         }
 
-        return new StrategyBestFirst(new AStar(initialState));
+        printStream.format("Solution length: %14d\n\n", totalSolutionLength);
+        printStream.println("          Explored     Frontier");
+
+        for (char agentName : Level.getAgentNames()){
+            printStream.format("Agent %c: %9d    %9d\n", agentName, countExplored[agentName - '0'], countFrontier[agentName - '0']);
+        }
     }
 }

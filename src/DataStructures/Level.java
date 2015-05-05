@@ -1,5 +1,6 @@
 package DataStructures;
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 public final class Level {
@@ -9,22 +10,32 @@ public final class Level {
 //    private static Map<Integer, Character> boxes = new HashMap<Integer, Character>();
 //    private static Map<Color, LinkedList<Integer>> boxesByColor = new HashMap<Color, LinkedList<Integer>>();
 //    private static Map<Character, LinkedList<Integer>> boxesByCharacter = new HashMap<Character, LinkedList<Integer>>();
-    private static Set<Integer> takenBoxes = new HashSet<Integer>();
+    private static Map<Integer, Character> takenBoxes = new HashMap<Integer, Character>();
+
+//    private static Map<Integer, Box> boxes = new HashMap<Integer, Box>();
 
     private static Map<Integer, Goal> goalsByCoordinates2 = new HashMap<Integer, Goal>();
     private static Map<Character, LinkedList<Goal>> goalsByCharacter2 = new HashMap<Character, LinkedList<Goal>>();
 
+    private static Map<Character, Queue<Goal>> goals;
+
 //    private static Map<Integer, Character> agents = new HashMap<Integer, Character>();
     private static Map<Character, Integer> agentsByName = new HashMap<Character, Integer>();
+    private static List<Character> agentNames = new LinkedList<Character>();
+    private static Map<Character, Status> status = new HashMap<Character, Status>();
 
     private static Node state = new Node(null);
 
     private Level() {
     }
 
-    public static Map<Integer, Character> getAgents() {
-        return state.getAgents();
+    public static Map<Character, Integer> getAgents() {
+        return agentsByName;
     }
+
+//    public static Map<Integer, Character> getAgents() {
+//        return state.getAgents();
+//    }
 
     public static Map<Integer, Character> getBoxes(){
         return state.getBoxes();
@@ -57,38 +68,34 @@ public final class Level {
         colors.put(object, color);
     }
 
-    public static void addAgent(int row, int col, char chr) {
+    public static void addAgent(int row, int col, char agentName) {
 
-        if(!colors.containsKey(chr)){
-            colors.put(chr, Color.BLUE);
+        if(!colors.containsKey(agentName)){
+            colors.put(agentName, Color.BLUE);
         }
 
         Integer coordinates = Coordinates.hashCode(row, col);
 //        agents.put(coordinates, chr);
-        agentsByName.put(chr, coordinates);
-        state.addAgent(coordinates, chr);
+        agentsByName.put(agentName, coordinates);
+        state.addAgent(coordinates, agentName);
+        status.put(agentName, Status.FREE);
     }
 
-    public static void addBox(int row, int col, char chr) {
+    public static void addBox(int row, int col, char boxLetter) {
         Integer hashCoordinates = Coordinates.hashCode(row, col);
-//        boxes.put(hashCoordinates, chr);
-//
-        if(!colors.containsKey(chr)){
-            colors.put(chr, Color.BLUE);
+
+        if(!colors.containsKey(boxLetter)){
+            colors.put(boxLetter, Color.BLUE);
         }
 
-////        Color boxColor = colors.get(chr);
-//
-////        if(!boxesByColor.containsKey(boxColor)){
-////            boxesByColor.put(boxColor, new LinkedList<Integer>());
-////        }
-//        if(!boxesByCharacter.containsKey(chr)){
-//            boxesByCharacter.put(chr, new LinkedList<Integer>());
-//        }
-////        boxesByColor.get(boxColor).add(hashCoordinates);
-//        boxesByCharacter.get(chr).add(hashCoordinates);
+//        Box box = new Box();
+//        box.HashCoordinates = hashCoordinates;
+//        box.Letter = boxLetter;
+//        box.Status = Status.FREE;
 
-        state.addBox(hashCoordinates, chr);
+//        boxes.put(box.HashCoordinates, box);
+
+        state.addBox(hashCoordinates, boxLetter);
     }
 
     public static boolean hasGoal(int row, int col) {
@@ -131,19 +138,50 @@ public final class Level {
     }
 
     public static Integer getGoalFor(Character agentName){
-        Color agentColor = colors.get(agentName);
-        List<Goal> goalsOfAgentColor = GetGoalsOfColor(agentColor);
 
-        //TODO: get suitable goal instead
-        for(Goal goal : goalsOfAgentColor){
-            if(goal.Status == Status.FREE){
-                goal.Status = Status.TAKEN;
-                return goal.HashCoordinates;
-            }
+        if(goals == null){
+            InstantiateGoalQueues();
         }
 
-        return -1;
-//        return goalsByCharacter.get(goalLetter).pop();
+        Queue<Goal> agentQueue = goals.get(agentName);
+        Integer goalCount = 0;
+
+        Goal goal = agentQueue.poll();
+        goalCount++;
+
+        // keep searching for a goal, until you find unsatisfied
+        // or you have tried all fo them
+        while(goal.Status != Status.FREE){
+
+            agentQueue.add(goal);
+
+            if(goalCount > agentQueue.size()){
+                return -1;
+            }
+
+            goal = agentQueue.poll();
+            goalCount++;
+        }
+
+        goal.Status = Status.TAKEN;
+        agentQueue.add(goal);
+
+        return goal.HashCoordinates;
+    }
+
+    private static void InstantiateGoalQueues() {
+        goals = new HashMap<Character, Queue<Goal>>();
+
+        for(Character agentName : agentsByName.keySet()){
+            Queue<Goal> goalQueue = prioritizeGoalsForAgent(agentName);
+
+            goals.put(agentName, goalQueue);
+        }
+    }
+
+    private static Queue<Goal> prioritizeGoalsForAgent(Character agentName) {
+        Color agentColor = colors.get(agentName);
+        return new ArrayDeque<Goal>(GetGoalsOfColor(agentColor));
     }
 
     public static Integer getBoxFor(Character agentName, Integer goalHashCoordinates){
@@ -151,10 +189,12 @@ public final class Level {
 //        char goalLetter = goalsByCoordinates.get(goalHashCoordinates);
         char boxLetter = Character.toUpperCase(goalLetter);
 
-        //TODO: get suitable box instead
+        //TODO: get closest box, which do not satisfy a goal with
+        //TODO: bigger or equal priority
+
         for(int boxHashCoordinates : state.getBoxes(boxLetter)){
-            if(!takenBoxes.contains(boxHashCoordinates)){
-                takenBoxes.add(boxHashCoordinates);
+            if(!takenBoxes.containsKey(boxHashCoordinates)){
+                takenBoxes.put(boxHashCoordinates, agentName);
                 return boxHashCoordinates;
             }
         }
@@ -192,8 +232,10 @@ public final class Level {
         int newCoordinates = Coordinates.move(boxHashCoordinates, dir);
 //        boxesByCharacter.get(boxLetter).add(newCoordinates);
 //        boxes.put(newCoordinates, boxLetter);
-        takenBoxes.remove(boxHashCoordinates);
-        takenBoxes.add(newCoordinates);
+        if(takenBoxes.containsKey(boxHashCoordinates)) {
+            Character agentName = takenBoxes.remove(boxHashCoordinates);
+            takenBoxes.put(newCoordinates, agentName);
+        }
 
         Character boxLetter = state.getBoxLetter(newCoordinates);
         // set as satisfied if a box is moved to the goal
@@ -201,6 +243,14 @@ public final class Level {
                 goalsByCoordinates2.get(newCoordinates).Letter.equals(Character.toLowerCase(boxLetter))){
             goalsByCoordinates2.get(newCoordinates).Status = Status.SATISFIED;
         }
+
+        if(goalsByCoordinates2.containsKey(boxHashCoordinates)){
+            goalsByCoordinates2.get(boxHashCoordinates).Status = Status.FREE;
+            takenBoxes.remove(boxHashCoordinates);
+        }
+
+        // TODO: set as unsatisfied if a box is moved out of the goal
+        // TODO: add it in the "goal queue"
     }
 
     private static void moveAgent(int agentHashCoordinates, Command.dir dir) {
@@ -209,4 +259,51 @@ public final class Level {
         agentsByName.put(agentName, newCoordinates);
 //        agents.put(newCoordinates, agentName);
     }
+
+    public static List<Character> getAgentNames(){
+
+        if(agentNames.isEmpty()){
+            agentNames.addAll(agentsByName.keySet());
+
+            Collections.sort(agentNames);
+        }
+
+        return agentNames;
+    }
+
+    public static boolean AreGoalsSatisfied(){
+
+        for (Goal goal : goalsByCoordinates2.values()){
+            if(goal.Status != Status.SATISFIED){
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static boolean isAgentFree(Character agentName) {
+        return status.get(agentName) == Status.FREE;
+    }
+
+    public static void setAgentBusy(Character agentName) {
+        status.put(agentName, Status.TAKEN);
+    }
+
+    public static void setAgentFree(Character agentName) {
+        status.put(agentName, Status.FREE);
+    }
+
+    //TODO: THIS IS AWFUL
+    // it is setting a box free, but getting agentName for parameter ?? wtf
+    public static void setBoxFree(Character agentName) {
+            for (Map.Entry<Integer, Character> entry : takenBoxes.entrySet())
+            {
+                if(entry.getValue().equals(agentName)){
+                    takenBoxes.remove(entry.getKey());
+                    return;
+                }
+        }
+    }
+
 }
