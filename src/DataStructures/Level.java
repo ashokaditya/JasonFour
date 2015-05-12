@@ -1,9 +1,12 @@
 package DataStructures;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 public final class Level {
+
+    public static int MAX_ROW = 100;
+    public static int MAX_COLUMN = 100;
+
     private static Set<Integer> walls = new HashSet<Integer>();
     private static Map<Character, Color> colors = new HashMap<Character, Color>();
 
@@ -24,7 +27,7 @@ public final class Level {
     private static List<Character> agentNames = new LinkedList<Character>();
     private static Map<Character, Status> status = new HashMap<Character, Status>();
 
-    private static Node state = new Node(null);
+    public static Node state = new Node(null);
 
     private Level() {
     }
@@ -41,7 +44,7 @@ public final class Level {
         return state.getBoxes();
     }
 
-    public static char getGoal(int row, int col) { return goalsByCoordinates2.get(Coordinates.hashCode(row, col)).Letter; }
+    public static char getGoal(int row, int col) { return goalsByCoordinates2.get(Coordinates.hashCode(row, col)).letter; }
 
     public static void addWall(int row, int col) {
         walls.add(Coordinates.hashCode(row, col));
@@ -89,29 +92,21 @@ public final class Level {
         }
 
 //        Box box = new Box();
-//        box.HashCoordinates = hashCoordinates;
-//        box.Letter = boxLetter;
+//        box.hashCoordinates = hashCoordinates;
+//        box.letter = boxLetter;
 //        box.Status = Status.FREE;
 
-//        boxes.put(box.HashCoordinates, box);
+//        boxes.put(box.hashCoordinates, box);
 
         state.addBox(hashCoordinates, boxLetter);
-    }
-
-    public static boolean hasGoal(int row, int col) {
-        return goalsByCoordinates2.containsKey(Coordinates.hashCode(row, col));
     }
 
     public static boolean hasGoal(int goalHashCoordinates) {
         return goalsByCoordinates2.containsKey(goalHashCoordinates);
     }
 
-    public static boolean hasWall(int wallHashCoordinate) {
+    public static boolean hasWallAt(int wallHashCoordinate) {
         return walls.contains(wallHashCoordinate);
-    }
-
-    public static boolean hasWall(int row, int col) {
-        return walls.contains(Coordinates.hashCode(row, col));
     }
 
     public static void update(Character agentName, Command command){
@@ -150,7 +145,7 @@ public final class Level {
         goalCount++;
 
         // keep searching for a goal, until you find unsatisfied
-        // or you have tried all fo them
+        // or you have tried all of them
         while(goal.Status != Status.FREE){
 
             agentQueue.add(goal);
@@ -166,26 +161,41 @@ public final class Level {
         goal.Status = Status.TAKEN;
         agentQueue.add(goal);
 
-        return goal.HashCoordinates;
+        return goal.hashCoordinates;
     }
 
     private static void InstantiateGoalQueues() {
         goals = new HashMap<Character, Queue<Goal>>();
 
         for(Character agentName : agentsByName.keySet()){
-            Queue<Goal> goalQueue = prioritizeGoalsForAgent(agentName);
+            Queue<Goal> goalQueue = new ArrayDeque<Goal>(prioritizeGoalsForAgent(agentName));
 
             goals.put(agentName, goalQueue);
         }
     }
 
-    private static Queue<Goal> prioritizeGoalsForAgent(Character agentName) {
+    //TODO: do not dismiss goals of different color at this point
+    private static List<Goal> prioritizeGoalsForAgent(Character agentName) {
+
+        //TODO: change maxRow, maxCol
+        GoalPrioritize goalPrioritize =  new GoalPrioritize(walls, goalsByCoordinates2, MAX_ROW, MAX_COLUMN);
+        List<Goal> prioritizedGoals = goalPrioritize.prioritizeFor(agentsByName.get(agentName));
+
         Color agentColor = colors.get(agentName);
-        return new ArrayDeque<Goal>(GetGoalsOfColor(agentColor));
+        Set<Goal> goalsOfAgentColor = new HashSet<Goal>(GetGoalsOfColor(agentColor));
+
+        List<Goal> goalsToReturn = new LinkedList<Goal>();
+        for (Goal goal : prioritizedGoals){
+            if(goalsOfAgentColor.contains(goal)){
+                goalsToReturn.add(goal);
+            }
+        }
+
+        return goalsToReturn;
     }
 
     public static Integer getBoxFor(Character agentName, Integer goalHashCoordinates){
-        char goalLetter = goalsByCoordinates2.get(goalHashCoordinates).Letter;
+        char goalLetter = goalsByCoordinates2.get(goalHashCoordinates).letter;
 //        char goalLetter = goalsByCoordinates.get(goalHashCoordinates);
         char boxLetter = Character.toUpperCase(goalLetter);
 
@@ -237,10 +247,10 @@ public final class Level {
             takenBoxes.put(newCoordinates, agentName);
         }
 
-        Character boxLetter = state.getBoxLetter(newCoordinates);
+        Character boxLetter = state.getBoxLetterAt(newCoordinates);
         // set as satisfied if a box is moved to the goal
         if(goalsByCoordinates2.containsKey(newCoordinates) &&
-                goalsByCoordinates2.get(newCoordinates).Letter.equals(Character.toLowerCase(boxLetter))){
+                goalsByCoordinates2.get(newCoordinates).letter == Character.toLowerCase(boxLetter)){
             goalsByCoordinates2.get(newCoordinates).Status = Status.SATISFIED;
         }
 
@@ -251,13 +261,6 @@ public final class Level {
 
         // TODO: set as unsatisfied if a box is moved out of the goal
         // TODO: add it in the "goal queue"
-    }
-
-    private static void moveAgent(int agentHashCoordinates, Command.dir dir) {
-        Character agentName = state.getAgentName(agentHashCoordinates);
-        int newCoordinates = Coordinates.move(agentHashCoordinates, dir);
-        agentsByName.put(agentName, newCoordinates);
-//        agents.put(newCoordinates, agentName);
     }
 
     public static List<Character> getAgentNames(){

@@ -24,6 +24,7 @@ public class SearchClient {
         int iterations = 0;
         while (true) {
             if (iterations % 200 == 0) {
+                Main.maxMemory = Math.max(Main.maxMemory, Memory.used());
                 System.err.println(strategy.searchStatus());
             }
 //            if (Memory.shouldEnd()) {

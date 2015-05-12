@@ -20,17 +20,25 @@ public abstract class Heuristic implements Comparator<Node> {
     public int h(Node n) {
 //        int agentHashCoordinates = Coordinates.hashCode(n.agentRow, n.agentCol);
 
-        int h = Coordinates.manhattanDistance(n.box, n.goal)+ Coordinates.manhattanDistance(n.agentHashCoordinates, n.box);
+        if(n.h != -1){
+            return n.h;
+        }
+
+        int h = Coordinates.manhattanDistance(n.box, n.goal) +
+                Coordinates.manhattanDistance(n.agentHashCoordinates, n.box);
 
         Set<Character> allLetters = initialState.getAllBoxLetters();
 
         int counter = 0;
 
         for (Character letter : allLetters){
-            Set<Integer> coordinatesForLetter = initialState.getBoxes(letter);
 
-            for (Integer coordinates : coordinatesForLetter){
-                if(!n.getBoxes(letter).contains(coordinates)){
+            Set<Integer> initialCoordinatesForBoxLetter = initialState.getBoxes(letter);
+
+            HashSet<Integer> currentCoordinatesForBoxLetter = n.getBoxes(letter);
+
+            for (Integer coordinates : initialCoordinatesForBoxLetter){
+                if(!currentCoordinatesForBoxLetter.contains(coordinates)){
                     counter++;
                 }
             }
@@ -40,7 +48,11 @@ public abstract class Heuristic implements Comparator<Node> {
             counter--;
         }
 
-        return h + counter*10;
+        h += counter*10;
+
+        n.h = h;
+
+        return h;
     }
 
     public abstract int f(Node n);

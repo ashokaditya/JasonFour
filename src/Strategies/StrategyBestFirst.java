@@ -15,7 +15,7 @@ public class StrategyBestFirst extends Strategy {
 
     private Heuristic heuristic;
 
-    private HashSet<Node> front;
+    private HashSet<String> front;
     private PriorityQueue<Node> frontier;
     //TODO: only for debugging, delete later
 //    public List<Node> fronttt;
@@ -24,20 +24,20 @@ public class StrategyBestFirst extends Strategy {
         super();
         heuristic = h;
         frontier = new PriorityQueue<Node>(100, h);
-        front = new HashSet<Node>(100);
+        front = new HashSet<String>(100);
 //        fronttt = new LinkedList<Node>();
     }
 
     public Node getAndRemoveLeaf() {
         Node headNode = frontier.poll();
-        front.remove(headNode);
+        front.remove(headNode.encode());
 //        fronttt.remove(headNode);
         return headNode;
     }
 
     public void addToFrontier( Node n ) {
         frontier.add(n);
-        front.add(n);
+        front.add(n.encode());
 //        fronttt.add(n);
     }
 
@@ -50,7 +50,7 @@ public class StrategyBestFirst extends Strategy {
     }
 
     public boolean inFrontier( Node n ) {
-        return front.contains(n);//frontier.contains(n);
+        return front.contains(n.encode());
     }
 
     public String toString() {

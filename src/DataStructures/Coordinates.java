@@ -1,11 +1,11 @@
 package DataStructures;
 
 public class Coordinates {
-    private Integer row;
-    private Integer col;
-    private int hashCode;
+    public final Integer row;
+    public final Integer col;
+    public final int hashCode;
 
-    //log(MAX_COL) should be less than offset
+    //log(MAX_COLUMN) should be less than offset
     private final static int offset = 7;
     private final static int hashOffsetPerRow = 1 << offset;
 
@@ -16,40 +16,27 @@ public class Coordinates {
         col = hashCode - (row << offset);
     }
 
-    public Integer getRow() {
-        return this.row;
-    }
-
-    public Integer getCol() {
-        return this.col;
-    }
-
-    public Coordinates(int row, int col) {
-        this.row = Integer.valueOf(row);
-        this.col = Integer.valueOf(col);
-
-        this.hashCode = (row << offset) + col;
-    }
-
     @Override
     public int hashCode() {
         return this.hashCode;
     }
 
-    public static int hashCode(int x, int y){
+    @Override
+    public boolean equals(Object obj) {
+        Coordinates other = (Coordinates) obj;
+        return other == null ? false : this.row == other.row && this.col == other.col;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("row: %d    col: %d    h: %d", row, col, hashCode);
+    }
+
+    public static int hashCode(int x, int y) {
         return (x << offset) + y;
     }
 
-    public boolean equals(Object obj) {
-        Coordinates other = (Coordinates)obj;
-        return other == null?false:this.row == other.row && this.col == other.col;
-    }
-
-    public int manhattanDistanceTo(Coordinates targetCoordinates) {
-        return Math.abs(this.row.intValue() - targetCoordinates.getRow().intValue()) + Math.abs(this.col.intValue() - targetCoordinates.getCol().intValue());
-    }
-
-    public static int manhattanDistance(int sourceHash, int targetHash){
+    public static int manhattanDistance(int sourceHash, int targetHash) {
         int sourceRow = sourceHash >> offset;
         int targetRow = targetHash >> offset;
         int sourceCol = sourceHash - (sourceRow << offset);
@@ -59,15 +46,34 @@ public class Coordinates {
     }
 
     public static int move(int agentHashCoordinates, Command.dir direction) {
-        if(direction == Command.dir.E){
+        if (direction == Command.dir.E) {
             return agentHashCoordinates + 1;
         }
-        if(direction == Command.dir.W){
+        if (direction == Command.dir.W) {
             return agentHashCoordinates - 1;
         }
-        if(direction == Command.dir.N){
+        if (direction == Command.dir.N) {
             return agentHashCoordinates - hashOffsetPerRow;
         }
         return agentHashCoordinates + hashOffsetPerRow;
     }
+
+//    public Coordinates(int row, int col) {
+//        this.row = Integer.valueOf(row);
+//        this.col = Integer.valueOf(col);
+//
+//        this.hashCode = (row << offset) + col;
+//    }
+//
+//    public Integer getRow() {
+//        return this.row;
+//    }
+//
+//    public Integer getCol() {
+//        return this.col;
+//    }
+//    public int manhattanDistanceTo(Coordinates targetCoordinates) {
+//        return Math.abs(this.row.intValue() - targetCoordinates.row.intValue()) +
+//                Math.abs(this.col.intValue() - targetCoordinates.col.intValue());
+//    }
 }

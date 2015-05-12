@@ -1,6 +1,6 @@
 import DataStructures.Color;
-import DataStructures.Coordinates;
 import DataStructures.Level;
+import DataStructures.Memory;
 import DataStructures.Node;
 import Heuristics.AStar;
 import Heuristics.Greedy;
@@ -20,14 +20,22 @@ public class Main {
     private static int[] countFrontier = new int[10];
     private static int[] countExplored = new int[10];
     private static int totalSolutionLength;
+    private static long startTime;
+
+    private static BufferedReader serverMessages;
+
+    public static float maxMemory;
+
 
     public static void main(String[] args) throws Exception {
-        BufferedReader serverMessages = GetInputSource(args);
+        serverMessages = GetInputSource(args);
 
         // Read level and create the initial state of the problem
         ReadInput(serverMessages);
 
         HashMap<Character, List<Node>> solutions = new HashMap<Character, List<Node>>();
+
+        startTime = System.currentTimeMillis();
 
         while (!Level.AreGoalsSatisfied()) {
 
@@ -54,30 +62,20 @@ public class Main {
     }
 
     private static List<Node> CreatePlan(Character agentName, String[] args) throws IOException {
-        int agentHashCoordinates = Level.getAgents().get(agentName);
-
-        Node initialState = new Node(null);
-
-        Coordinates agentCoordinates = new Coordinates(agentHashCoordinates);
-        initialState.agentRow = agentCoordinates.getRow();
-        initialState.agentCol = agentCoordinates.getCol();
-        initialState.agentHashCoordinates = agentHashCoordinates;
-
         Integer goal = Level.getGoalFor(agentName);
         if (goal == -1) {
             return null;
         }
         Integer box = Level.getBoxFor(agentName, goal);
 
-        for (Map.Entry<Integer, Character> entry2 : Level.getBoxes().entrySet()) {
-            initialState.addBox(entry2.getKey(), entry2.getValue());
-        }
+        int agentHashCoordinates = Level.getAgents().get(agentName);
 
-        for (Map.Entry<Character, Integer> entry2 : Level.getAgents().entrySet()) {
-            initialState.addAgent(entry2.getValue(), entry2.getKey());
-        }
-
+        Node initialState = new Node(null);
+        initialState.agentHashCoordinates = agentHashCoordinates;
+        initialState.updateFrom(Level.state);
         initialState.setDedicatedGoal(box, goal);
+
+        System.err.println("Starting search with goal " + goal + " and box " + box);
 
         SearchClient client = new SearchClient(initialState);
         Strategy strategy = getStrategy(initialState, args);
@@ -89,22 +87,8 @@ public class Main {
         return solution;
     }
 
-    private static void ExecutePlans(HashMap<Character, List<Node>> solutions) {
+    private static void ExecutePlans(HashMap<Character, List<Node>> solutions) throws IOException {
 
-//        Boolean solved = false;
-//        int solutionLength = 0;
-//        for (List<Node> list : solutions.values()) {
-//            if (list != null) {
-//                solved = true;
-//                if (list.size() > solutionLength) {
-//                    solutionLength = list.size();
-//                }
-//            }
-//        }
-//        if (!solved) {
-//            System.err.println("Unable to solve level");
-//            System.exit(0);
-//        } else {
         Boolean needReplan = false;
 
         while (!needReplan) {
@@ -131,12 +115,11 @@ public class Main {
                 System.out.format("[%s]\n", String.join(",", jointAction));
             }
 
-            //                String response = serverMessages.readLine();
-            //                if (response.contains("false")) {
-            //                    System.err.format("Server responsed with %s to the inapplicable action: %s\n", response, jointAction);
-            //                    System.err.format("%s was attempted in \n%s\n", jointAction, n);
-            //                    break;
-            //                }
+//            String response = serverMessages.readLine();
+//            if (response.contains("false")) {
+//                System.err.format("Server responsed with %s to the inapplicable action: %s\n", response, jointAction);
+//                System.err.format("%s was attempted in \n%s\n", jointAction, Level.state);
+//                break;
 //            }
         }
     }
@@ -210,7 +193,8 @@ public class Main {
 
         int row = 0;
         while (currentLine != null && !currentLine.equals("")) {
-            for (int col = 0; col < currentLine.length(); col++) {
+            int col;
+            for (col = 0; col < currentLine.length(); col++) {
                 char chr = currentLine.charAt(col);
                 if ('+' == chr) { // Walls
                     Level.addWall(row, col);
@@ -222,27 +206,40 @@ public class Main {
                     Level.addGoal(row, col, chr);
                 }
             }
+
+            Level.MAX_COLUMN = Math.max(col, Level.MAX_COLUMN);
+
             row++;
             currentLine = serverMessages.readLine();
         }
+
+        Level.MAX_ROW = row;
     }
 
     private static void PrintTotals() {
 
         PrintStream printStream;
 
-        if(fromFile){
+        if (fromFile) {
             printStream = System.out;
-        }
-        else{
+        } else {
             printStream = System.err;
         }
 
-        printStream.format("Solution length: %14d\n\n", totalSolutionLength);
-        printStream.println("          Explored     Frontier");
+        printStream.format("Solution length: %14d\n", totalSolutionLength);
+        printStream.format("Time taken:     %14.2fs\n", (System.currentTimeMillis() - startTime) / 1000f);
+        printStream.format("Max memory used:%12.2f MB\n", maxMemory);
+        printStream.format("Encode counter:  %14d\n", Node.encodeCounter);
+        printStream.println();
+                printStream.println("          Explored     Frontier");
 
-        for (char agentName : Level.getAgentNames()){
+        for (char agentName : Level.getAgentNames()) {
             printStream.format("Agent %c: %9d    %9d\n", agentName, countExplored[agentName - '0'], countFrontier[agentName - '0']);
         }
+
+//        printStream.println("");
+//        printStream.println("Hash count: "+ Node.hashCount);
+//        printStream.println("Equals count: "+ Node.equalsCount);
+//        printStream.println("Failed count: "+ Node.failedEqualsCount);
     }
 }

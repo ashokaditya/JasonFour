@@ -1,30 +1,34 @@
 package DataStructures;
 
+import com.sun.xml.internal.fastinfoset.util.CharArrayArray;
+
 import java.util.*;
 
 public class Node {
 
-    public static int MAX_ROW = 70;
-    public static int MAX_COLUMN = 70;
-
-    public int agentRow;
-    public int agentCol;
     public int agentHashCoordinates;
 
     public Node parent;
     public Command action;
 
+    public static int encodeCounter;
+
     //TODO: is it possible to save space ?
+    private HashMap<Integer, Character> agents = new HashMap<Integer, Character>();
     private HashMap<Integer, Character> boxes = new HashMap<Integer, Character>();
     private HashMap<Character, HashSet<Integer>> boxesByCharacter = new HashMap<Character, HashSet<Integer>>();
-//    private HashMap<Coordinates, Character> boxes = new HashMap<Coordinates, Character>();
-//    private HashMap<Character, HashSet<Coordinates>> boxesByCharacter = new HashMap<Character, HashSet<Coordinates>>();
 
     public int goal;
     public int box;
 
     private int g;
-    public HashMap<Integer, Character> agents = new HashMap<Integer, Character>();
+    public static int equalsCount;
+    public static int failedEqualsCount;
+    public static int hashCount;
+    public int h = -1;
+
+    private String encoding;
+
 
     public Node(Node parent) {
         this.parent = parent;
@@ -35,8 +39,156 @@ public class Node {
         }
     }
 
+    //////////////////////////// GETTERS & SETTERS ////////////////////////////
+
     public int g() {
         return g;
+    }
+
+    public HashMap<Integer, Character> getAgents() {
+        return agents;
+    }
+
+    public HashMap<Integer, Character> getBoxes() {
+        return this.boxes;
+    }
+
+    public HashSet<Integer> getBoxes(char boxLetter) {
+        return this.boxesByCharacter.get(boxLetter);
+    }
+
+    public Set<Character> getAllBoxLetters() {
+        return boxesByCharacter.keySet();
+    }
+
+    public void setDedicatedGoal(Integer boxHashCoordinates, Integer goalHashCoordinates) {
+        box = boxHashCoordinates;
+        goal = goalHashCoordinates;
+    }
+
+    @Override
+    public int hashCode() {
+
+        hashCount++;
+
+        //TODO: make this faster
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + agentHashCoordinates;
+        result = prime * result + box;
+        result = prime * result + goal;
+        for (Integer boxHashCoordinates : this.boxes.keySet()) {
+            result = result ^ boxHashCoordinates.hashCode();
+        }
+//        result = prime * result + this.boxes.hashCode();
+//        for (Map.Entry<Integer, Character> entry : this.boxes.entrySet()) {
+//            result = prime * result + entry.getKey().hashCode();
+//            result = prime * result + entry.getValue().hashCode();
+//        }
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        //TODO: make this faster
+
+        equalsCount++;
+
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass()) {
+            failedEqualsCount++;
+            return false;
+        }
+        Node other = (Node) obj;
+        if (agentHashCoordinates != other.agentHashCoordinates) {
+            failedEqualsCount++;
+            return false;
+        }
+        if (box != other.box) {
+            failedEqualsCount++;
+            return false;
+        }
+        if (goal != other.goal) {
+            failedEqualsCount++;
+            return false;
+        }
+        if (!boxes.equals(other.boxes)) {
+            failedEqualsCount++;
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder s = new StringBuilder();
+
+        for (int row = 0; row < Level.MAX_ROW; row++) {
+            for (int col = 0; col < Level.MAX_COLUMN; col++) {
+                int currentHashCoordinates = Coordinates.hashCode(row, col);
+                if (this.boxes.containsKey(currentHashCoordinates)) {
+                    s.append(this.getBoxLetter(row, col));
+                } else if (Level.hasGoal(currentHashCoordinates)) {
+                    s.append(Level.getGoal(row, col));
+                } else if (Level.hasWallAt(currentHashCoordinates)) {
+                    s.append("+");
+                } else if (agentHashCoordinates == currentHashCoordinates) {
+                    s.append("0");
+                } else {
+                    s.append(" ");
+                }
+            }
+            s.append("\n");
+        }
+
+        return s.toString();
+    }
+
+    public String encode() {
+
+        if(encoding != null){
+            return encoding;
+        }
+
+        encodeCounter++;
+
+        StringBuilder sb = new StringBuilder();
+
+        for (Map.Entry<Integer, Character> entry : agents.entrySet()) {
+            sb.append(entry.getValue());
+            sb.append("#");
+            sb.append(entry.getKey());
+            sb.append("|");
+        }
+
+        sb.append(box);
+        sb.append("b#");
+        sb.append(goal);
+        sb.append("g|");
+
+        for (Map.Entry<Character, HashSet<Integer>> entry : boxesByCharacter.entrySet()) {
+            sb.append(entry.getKey());
+            sb.append("#");
+
+            Set<Integer> values = entry.getValue();
+
+            if (values.size() > 1) {
+                values = new TreeSet<Integer>(values);
+            }
+
+            for (int hashCoordinates : values) {
+                sb.append(hashCoordinates);
+                sb.append("|");
+            }
+        }
+
+        encoding = sb.toString();
+
+        return encoding;
     }
 
     public boolean isInitialState() {
@@ -69,31 +221,29 @@ public class Node {
 
             int newAgentHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir1);
 
-            if(command.actType == Command.type.Move){
-                if(this.hasFreeCellAt(newAgentHashCoordinates)){
-                    expandedNodes.add(this.ChildNode(command));
+            if (command.actType == Command.type.Move) {
+                if (this.hasFreeCellAt(newAgentHashCoordinates)) {
+                    expandedNodes.add(this.ChildNode(agentHashCoordinates, command));
                 }
-            }
-            else if(command.actType == Command.type.Pull){
+            } else if (command.actType == Command.type.Pull) {
 
-                if(this.hasFreeCellAt(newAgentHashCoordinates)) {
+                if (this.hasFreeCellAt(newAgentHashCoordinates)) {
                     int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir2);
 
                     char agentName = agents.get(agentHashCoordinates);
 
-                    if (this.hasBoxAt(boxHashCoordinates) && Level.sameColor(agentName, getBoxLetter(boxHashCoordinates))) {
+                    if (this.hasBoxAt(boxHashCoordinates) && Level.sameColor(agentName, getBoxLetterAt(boxHashCoordinates))) {
                         expandedNodes.add(this.ChildNode(command));
                     }
                 }
-            }
-            else if(command.actType == Command.type.Push){
+            } else if (command.actType == Command.type.Push) {
                 int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir1);
                 char agentName = agents.get(agentHashCoordinates);
 
-                if(this.hasBoxAt(boxHashCoordinates) && Level.sameColor(agentName, getBoxLetter(boxHashCoordinates))){
+                if (this.hasBoxAt(boxHashCoordinates) && Level.sameColor(agentName, getBoxLetterAt(boxHashCoordinates))) {
 
                     int newBoxHashCoordinates = Coordinates.move(boxHashCoordinates, command.dir2);
-                    if(this.hasFreeCellAt(newBoxHashCoordinates)){
+                    if (this.hasFreeCellAt(newBoxHashCoordinates)) {
                         expandedNodes.add(this.ChildNode(command));
                     }
                 }
@@ -148,88 +298,7 @@ public class Node {
         return expandedNodes;
     }
 
-    private void moveBox(int oldBoxX, int oldBoxY, int newBoxX, int newBoxY) {
-        Integer oldBoxCoordinates = Coordinates.hashCode(oldBoxX, oldBoxY);
-        Integer newBoxCoordinates = Coordinates.hashCode(newBoxX, newBoxY);
-
-        Character boxLetter = this.boxes.remove(oldBoxCoordinates);
-        this.boxes.put(newBoxCoordinates, boxLetter);
-
-        this.boxesByCharacter.get(boxLetter).remove(oldBoxCoordinates);
-        this.boxesByCharacter.get(boxLetter).add(newBoxCoordinates);
-
-        if(box == oldBoxCoordinates){
-            box = newBoxCoordinates;
-        }
-    }
-
-    private void moveAgent(int newAgentX, int newAgentY) {
-        agentRow = newAgentX;
-        agentCol = newAgentY;
-    }
-
-    private int moveBox(int boxHashCoordinates, Command.dir direction){
-        Character boxLetter = this.boxes.remove(boxHashCoordinates);
-        this.boxesByCharacter.get(boxLetter).remove(boxHashCoordinates);
-
-        int newCoordinates = Coordinates.move(boxHashCoordinates, direction);
-        this.boxesByCharacter.get(boxLetter).add(newCoordinates);
-        this.boxes.put(newCoordinates, boxLetter);
-
-        if(this.box == boxHashCoordinates){
-            this.box = newCoordinates;
-        }
-
-//        takenBoxes.remove(boxHashCoordinates);
-//        takenBoxes.add(newCoordinates);
-
-        // set as satisfied if a box is moved to the goal
-//        if(goalsByCoordinates2.containsKey(newCoordinates) &&
-//                goalsByCoordinates2.get(newCoordinates).Letter.equals(Character.toLowerCase(boxLetter))){
-//            goalsByCoordinates2.get(newCoordinates).Status = Status.SATISFIED;
-//        }
-
-        return newCoordinates;
-    }
-
-    private void moveAgent(int agentHashCoordinates, Command.dir dir) {
-        Character agentName = agents.remove(agentHashCoordinates);
-        int newCoordinates = Coordinates.move(agentHashCoordinates, dir);
-        this.agentHashCoordinates = newCoordinates;
-//        agentsByName.put(agentName, newCoordinates);
-        agents.put(newCoordinates, agentName);
-    }
-
-    private boolean hasFreeCellAt(int cellHashCoordinates) {
-        return (!Level.hasWall(cellHashCoordinates) && !this.hasBoxAt(cellHashCoordinates) && !this.hasAgentAt(cellHashCoordinates));
-    }
-
-    private boolean hasAgentAt(int cellHashCoordinates) {
-        return agents.containsKey(cellHashCoordinates);
-    }
-
-    private boolean hasFreeCellAt(int row, int col) {
-        //TODO: add agent
-        return (!Level.hasWall(row, col) && !this.hasBoxAt(row, col));
-    }
-
-    private boolean hasBoxAt(int boxHashCoordinate) {
-        return boxes.containsKey(boxHashCoordinate);
-    }
-
-    private boolean hasBoxAt(int x, int y) {
-        return boxes.containsKey(Coordinates.hashCode(x, y));
-    }
-
-    private int dirToRowChange(Command.dir d) {
-        return (d == Command.dir.S ? 1 : (d == Command.dir.N ? -1 : 0)); // South is down one row (1), north is up one row (-1)
-    }
-
-    private int dirToColChange(Command.dir d) {
-        return (d == Command.dir.E ? 1 : (d == Command.dir.W ? -1 : 0)); // East is left one column (1), west is right one column (-1)
-    }
-
-    public Node ChildNode(Command command){
+    public Node ChildNode(Command command) {
         return ChildNode(this.agentHashCoordinates, command);
     }
 
@@ -237,11 +306,10 @@ public class Node {
         Node childNode = this.ChildNode();
         childNode.action = command;
         childNode.moveAgent(agentHashCoordinates, command.dir1);
-        if(command.actType == Command.type.Pull){
+        if (command.actType == Command.type.Pull) {
             int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir2);
             childNode.moveBox(boxHashCoordinates, Command.GetOpposite(command.dir2));
-        }
-        else if(command.actType == Command.type.Push){
+        } else if (command.actType == Command.type.Push) {
             int boxHashCoordinates = Coordinates.move(agentHashCoordinates, command.dir1);
             childNode.moveBox(boxHashCoordinates, command.dir2);
         }
@@ -251,16 +319,23 @@ public class Node {
 
     private Node ChildNode() {
         Node copy = new Node(this);
-
-        copy.boxes = (HashMap<Integer, Character>) this.boxes.clone();
-        copy.boxesByCharacter = new HashMap<Character, HashSet<Integer>>();
         copy.box = this.box;
         copy.goal = this.goal;
         copy.agentHashCoordinates = this.agentHashCoordinates;
-        copy.agents = (HashMap<Integer, Character>) this.agents.clone();
+        copy.boxes = new HashMap<Integer, Character>();
+        copy.boxesByCharacter = new HashMap<Character, HashSet<Integer>>();
+        copy.agents = new HashMap<Integer, Character>();
 
-        for (char c : this.boxesByCharacter.keySet()){
-            copy.boxesByCharacter.put(c, (HashSet<Integer>)this.boxesByCharacter.get(c).clone());
+        for (Map.Entry<Integer, Character> box : this.boxes.entrySet()){
+            copy.boxes.put(box.getKey(), box.getValue());
+        }
+
+        for (Map.Entry<Character, HashSet<Integer>> box : this.boxesByCharacter.entrySet()){
+            copy.boxesByCharacter.put(box.getKey(), new HashSet<Integer>(box.getValue()));
+        }
+
+        for (Map.Entry<Integer, Character> agent : this.agents.entrySet()){
+            copy.agents.put(agent.getKey(), agent.getValue());
         }
 
         return copy;
@@ -276,132 +351,96 @@ public class Node {
         return plan;
     }
 
-    @Override
-    public int hashCode() {
-
-        //TODO: make this faster
-
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + agentHashCoordinates;
-        result = prime * result + box;
-//        result = prime * result + agentCol;
-//        result = prime * result + agentRow;
-        for(Integer x : this.boxes.keySet()){
-            result = prime * result + x.hashCode();
-        }
-        //TODO: ???
-//        result = prime * result + Arrays.deepHashCode(boxes);
-        return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        //TODO: make this faster
-
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        Node other = (Node) obj;
-        if(agentHashCoordinates != other.agentHashCoordinates)
-            return false;
-        if(box != other.box){
-            return false;
-        }
-//        if (agentCol != other.agentCol)
-//            return false;
-//        if (agentRow != other.agentRow)
-//            return false;
-        //TODO: does it work ?
-        if (!boxes.equals(other.boxes)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    public String toString() {
-        StringBuilder s = new StringBuilder();
-        for (int row = 0; row < MAX_ROW; row++) {
-            if (!Level.hasWall(row, 0)) {
-                break;
-            }
-            for (int col = 0; col < MAX_COLUMN; col++) {
-                if (this.hasBoxAt(row, col)) {
-                    s.append(this.getBoxLetter(row, col));
-                } else if (Level.hasGoal(row, col)) {
-                    s.append(Level.getGoal(row, col));
-                } else if (Level.hasWall(row, col)) {
-                    s.append("+");
-                } else if (row == this.agentRow && col == this.agentCol) {
-                    s.append("0");
-                } else {
-                    s.append(" ");
-                }
-            }
-
-            s.append("\n");
-        }
-        return s.toString();
-    }
-
-    public char getBoxLetter(int x, int y) {
-        return boxes.get(Coordinates.hashCode(x, y));
-    }
-
-    public void addBox(int x, int y, char boxLetter) {
-        Integer coordinates = Coordinates.hashCode(x, y);
-
-        this.boxes.put(Coordinates.hashCode(x, y), boxLetter);
-
-        if(this.boxesByCharacter.containsKey(boxLetter)){
-            this.boxesByCharacter.get(boxLetter).add(coordinates);
-        }
-        else{
-            HashSet<Integer> newCoordinates = new HashSet<Integer>();
-            newCoordinates.add(coordinates);
-            this.boxesByCharacter.put(boxLetter, newCoordinates);
-        }
-    }
-
-    public HashMap<Integer, Character> getBoxes() {
-        return this.boxes;
-    }
-
-    public HashSet<Integer> getBoxes(char boxLetter) {
-        return this.boxesByCharacter.get(Character.toUpperCase(boxLetter));
-    }
-
-    public Set<Character> getAllBoxLetters(){
-        return boxesByCharacter.keySet();
-    }
-
-    public void setDedicatedGoal(Integer boxHashCoordinates, Integer goalHashCoordinates){
-        box = boxHashCoordinates;
-        goal = goalHashCoordinates;
-    }
-
-    public void addBox(Integer key, Character value) {
-        Coordinates coord = new Coordinates(key);
-        addBox(coord.getRow(), coord.getCol(), value);
-    }
-
-    public Character getBoxLetter(int boxHashCoordinates) {
+    public Character getBoxLetterAt(int boxHashCoordinates) {
         return boxes.get(boxHashCoordinates);
-    }
-
-    public Character getAgentName(int agentHashCoordinates) {
-        return this.agents.get(agentHashCoordinates);
     }
 
     public void addAgent(Integer agentHashCoordinates, Character agentName) {
         this.agents.put(agentHashCoordinates, agentName);
     }
 
-    public HashMap<Integer, Character> getAgents() {
-        return agents;
+    public void addBox(Integer boxHashCoordinates, Character boxLetter) {
+        this.boxes.put(boxHashCoordinates, boxLetter);
+
+        if (this.boxesByCharacter.containsKey(boxLetter)) {
+            this.boxesByCharacter.get(boxLetter).add(boxHashCoordinates);
+        } else {
+            HashSet<Integer> newCoordinates = new HashSet<Integer>();
+            newCoordinates.add(boxHashCoordinates);
+            this.boxesByCharacter.put(boxLetter, newCoordinates);
+        }
     }
+
+    public void updateFrom(Node state) {
+
+        for (Map.Entry<Integer, Character> entry2 : state.getBoxes().entrySet()) {
+            this.addBox(entry2.getKey(), entry2.getValue());
+        }
+
+        for (Map.Entry<Integer, Character> entry2 : state.getAgents().entrySet()) {
+            this.addAgent(entry2.getKey(), entry2.getValue());
+        }
+    }
+
+    //////////////////////////// PRIVATE METHODS ////////////////////////////
+
+    private int moveBox(int boxHashCoordinates, Command.dir direction) {
+        Character boxLetter = this.boxes.remove(boxHashCoordinates);
+        this.boxesByCharacter.get(boxLetter).remove(boxHashCoordinates);
+
+        int newCoordinates = Coordinates.move(boxHashCoordinates, direction);
+        this.boxesByCharacter.get(boxLetter).add(newCoordinates);
+        this.boxes.put(newCoordinates, boxLetter);
+
+        if (this.box == boxHashCoordinates) {
+            this.box = newCoordinates;
+        }
+
+//        takenBoxes.remove(boxHashCoordinates);
+//        takenBoxes.add(newCoordinates);
+
+        // set as satisfied if a box is moved to the goal
+//        if(goalsByCoordinates2.containsKey(newCoordinates) &&
+//                goalsByCoordinates2.get(newCoordinates).letter.equals(Character.toLowerCase(boxLetter))){
+//            goalsByCoordinates2.get(newCoordinates).Status = Status.SATISFIED;
+//        }
+
+        return newCoordinates;
+    }
+
+    private void moveAgent(int agentHashCoordinates, Command.dir dir) {
+        Character agentName = agents.remove(agentHashCoordinates);
+        int newCoordinates = Coordinates.move(agentHashCoordinates, dir);
+        this.agentHashCoordinates = newCoordinates;
+//        agentsByName.put(agentName, newCoordinates);
+        agents.put(newCoordinates, agentName);
+    }
+
+    private boolean hasFreeCellAt(int cellHashCoordinates) {
+
+        if (Level.hasWallAt(cellHashCoordinates)) {
+            return false;
+        }
+
+        // has box at cellHashCoordinates
+        if (this.boxes.containsKey(cellHashCoordinates)) {
+            return false;
+        }
+
+        // has agent at cellHashCoordinates
+        if (this.agents.containsKey(cellHashCoordinates)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean hasBoxAt(int boxHashCoordinate) {
+        return boxes.containsKey(boxHashCoordinate);
+    }
+
+    private char getBoxLetter(int x, int y) {
+        return boxes.get(Coordinates.hashCode(x, y));
+    }
+
 }
