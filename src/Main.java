@@ -1,7 +1,4 @@
-import DataStructures.Color;
-import DataStructures.Level;
-import DataStructures.Memory;
-import DataStructures.Node;
+import DataStructures.*;
 import Heuristics.AStar;
 import Heuristics.Greedy;
 import Heuristics.WeightedAStar;
@@ -90,37 +87,79 @@ public class Main {
     private static void ExecutePlans(HashMap<Character, List<Node>> solutions) throws IOException {
 
         Boolean needReplan = false;
+        Node n;
 
         while (!needReplan) {
             List<String> jointAction = new LinkedList<String>();
+            List<Command> updateActions = new ArrayList<Command>();
 
             for (char agentName : Level.getAgentNames()) {
+
                 List<Node> list = solutions.get(agentName);
 
+                //If there are any moves planned
                 if (list != null && !list.isEmpty()) {
-                    Node n = list.remove(0);
-                    Level.update(agentName, n.action);
+
+                    //If this is the last planned move - replan on next step
+                    if (list.size() == 1) {
+                        needReplan = true;
+                        Level.setAgentFree(agentName);
+                        Level.setBoxFree(agentName);
+                    }
+
+                    n = list.remove(0);
+                    updateActions.add(n.action);
                     jointAction.add(n.action.toString());
                 } else {
                     jointAction.add("NoOp");
                     needReplan = true;
                     Level.setAgentFree(agentName);
                     Level.setBoxFree(agentName);
+                    updateActions.add(null);
                 }
             }
 
             totalSolutionLength++;
 
-            if (!fromFile) {
+            if (fromFile) {
+                //if it is from file, just update regardless validity of actions
+                int i = 0;
+                for (Command command : updateActions) {
+                    if (command != null) {
+                        Level.update(Character.forDigit(i++, 10), command);
+                    }
+                }
+
+                continue;
+            } else {
+                //if it is not from file, write on console
                 System.out.format("[%s]\n", String.join(",", jointAction));
             }
 
-//            String response = serverMessages.readLine();
-//            if (response.contains("false")) {
-//                System.err.format("Server responsed with %s to the inapplicable action: %s\n", response, jointAction);
-//                System.err.format("%s was attempted in \n%s\n", jointAction, Level.state);
-//                break;
-//            }
+            String response = serverMessages.readLine();
+
+            // Response message is of type [ True, False .... ]
+            // Substring removes [] brackets
+            response = response.substring(1, response.length() - 1);
+
+            int i = 0;
+            for (String result : response.split(",")) {
+
+                Command command = updateActions.get(i);
+                char agentName = Character.forDigit(i, 10);
+
+                // If result is "True"
+                if (result.trim().equalsIgnoreCase("true")) {
+                    if (command != null) {
+                        Level.update(agentName, command);
+                    }
+                } else { //Then it should be "False"
+                    needReplan = true;
+                    Level.setAgentFree(agentName);
+                    Level.setBoxFree(agentName);
+                }
+                i++;
+            }
         }
     }
 
@@ -213,6 +252,8 @@ public class Main {
             currentLine = serverMessages.readLine();
         }
 
+        serverMessages.readLine();
+
         Level.MAX_ROW = row;
     }
 
@@ -231,7 +272,7 @@ public class Main {
         printStream.format("Max memory used:%12.2f MB\n", maxMemory);
         printStream.format("Encode counter:  %14d\n", Node.encodeCounter);
         printStream.println();
-                printStream.println("          Explored     Frontier");
+        printStream.println("          Explored     Frontier");
 
         for (char agentName : Level.getAgentNames()) {
             printStream.format("Agent %c: %9d    %9d\n", agentName, countExplored[agentName - '0'], countFrontier[agentName - '0']);
