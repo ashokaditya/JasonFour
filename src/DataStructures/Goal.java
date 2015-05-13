@@ -72,4 +72,8 @@ public class Goal {
     }
 
     public boolean isSatisfied() {return Level.state.getBoxes(capitalLetter).contains(this.hashCoordinates);}
+
+    public int getPriority(){
+        return dependentGoals.size();
+    }
 }

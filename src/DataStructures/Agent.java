@@ -8,6 +8,7 @@ public class Agent implements Comparable<Agent> {
     public char name;
     public int boxTaken;
     public Status status;
+    public int retryCounter;
 
     public int countExplored;
     public int countFrontier;

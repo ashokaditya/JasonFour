@@ -83,7 +83,7 @@ public class Main {
     private static void ExecutePlans(TreeMap<Agent, List<Node>> solutions) throws IOException {
 
         Boolean needReplan = false;
-        Node n;
+        Random random = new Random();
 
         while (!needReplan) {
             List<String> jointAction = new LinkedList<String>();
@@ -104,7 +104,7 @@ public class Main {
                         Level.setBoxFree(agent.name);
                     }
 
-                    n = list.remove(0);
+                    Node n = list.get(0);
                     updateActions.put(agent, n.action);
                     jointAction.add(n.action.toString());
                 } else {
@@ -153,16 +153,18 @@ public class Main {
                 if (result.trim().equalsIgnoreCase("true")) {
                     if (command != null) {
                         Level.update(agent.name, command);
+                        agent.retryCounter = 0;
+                        solutions.get(agent).remove(0);
                     }
                 } else {
                     //Then it should be "False"
-
-                    //TODO: make agent wait for up to 5 rounds at random
-
-                    needReplan = true;
-                    agent.setFree();
-                    agent.setTakenGoalFree();
-                    Level.setBoxFree(agent.name);
+                    agent.retryCounter++;
+                    if (agent.retryCounter > random.nextInt(4) + 2) {
+                        needReplan = true;
+                        agent.setFree();
+                        agent.setTakenGoalFree();
+                        Level.setBoxFree(agent.name);
+                    }
                 }
             }
         }
