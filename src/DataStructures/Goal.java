@@ -7,6 +7,9 @@ public class Goal {
     public Status Status;
     public final int hashCoordinates;
     public final char letter;
+    private final char capitalLetter;
+
+    //TODO: add color here
 
     // Goals this goal rely on to get satisfied
     public List<Goal> relyingGoals;
@@ -18,6 +21,7 @@ public class Goal {
         hashCoordinates = coordinates;
         letter = goalLetter;
         Status = status;
+        capitalLetter = Character.toUpperCase(goalLetter);
     }
 
     @Override
@@ -47,4 +51,25 @@ public class Goal {
 
         dependentGoals.add(goal);
     }
+
+    public boolean areDependentSatisfied() {
+
+        if(dependentGoals == null || dependentGoals.isEmpty()){
+            return true;
+        }
+
+        for (Goal goal : dependentGoals){
+            if(!goal.isSatisfied()){
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public boolean isFree() {
+        return this.Status == Status.FREE;
+    }
+
+    public boolean isSatisfied() {return Level.state.getBoxes(capitalLetter).contains(this.hashCoordinates);}
 }

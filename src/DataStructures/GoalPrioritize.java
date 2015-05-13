@@ -11,19 +11,25 @@ public class GoalPrioritize {
 
     private static Map<Integer, Goal> goals;
     private static Set<Integer> walls;
+    private static List<Goal> goalDependencies;
 
-    public GoalPrioritize(Set<Integer> walls, Map<Integer, Goal> goals, int maxRows, int maxCols) {
+    public GoalPrioritize(Set<Integer> walls, Map<Integer, Goal> goals, int maxRows, int maxCols, int agentHashCoordinates) {
         this.walls = walls;
         this.goals = goals;
         this.maxRows = maxRows;
         this.maxCols = maxCols;
+
+        Coordinates agentCoordinates = new Coordinates(agentHashCoordinates);
+
+        goalDependencies = GetGoalDependencies(agentCoordinates);
+
     }
 
     public List<Goal> prioritizeFor(int agentHashCoordinates) {
 
         Coordinates agentCoordinates = new Coordinates(agentHashCoordinates);
 
-        List<Goal> goalDependencies = GetGoalDependencies(agentCoordinates);
+//        List<Goal> goalDependencies = GetGoalDependencies(agentCoordinates);
 
         //key is goal hash coordinate
         //value is distance to goal from agent
@@ -140,7 +146,7 @@ public class GoalPrioritize {
             for (int goalHashOnTheWay : goalsOnTheWay) {
                 Goal goalOnTheWay = goalsWithDependencies.get(goalHashOnTheWay);
 
-                if (goalOnTheWay.letter != goal.letter) {
+                if (goalOnTheWay.hashCoordinates != goal.hashCoordinates) {
                     goalOnTheWay.addDependentGoal(goal);
 //                    goalsWithDependencies.add(goalOnTheWay);
                 }

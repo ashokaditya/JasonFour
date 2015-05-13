@@ -10,9 +10,6 @@ public final class Level {
     private static Set<Integer> walls = new HashSet<Integer>();
     private static Map<Character, Color> colors = new HashMap<Character, Color>();
 
-    //    private static Map<Integer, Character> boxes = new HashMap<Integer, Character>();
-//    private static Map<Color, LinkedList<Integer>> boxesByColor = new HashMap<Color, LinkedList<Integer>>();
-//    private static Map<Character, LinkedList<Integer>> boxesByCharacter = new HashMap<Character, LinkedList<Integer>>();
     private static Map<Integer, Character> takenBoxes = new HashMap<Integer, Character>();
 
 //    private static Map<Integer, Box> boxes = new HashMap<Integer, Box>();
@@ -20,27 +17,19 @@ public final class Level {
     private static Map<Integer, Goal> goalsByCoordinates2 = new HashMap<Integer, Goal>();
     private static Map<Character, LinkedList<Goal>> goalsByCharacter2 = new HashMap<Character, LinkedList<Goal>>();
 
-    private static Map<Character, Queue<Goal>> goals;
+//    private static Map<Character, Queue<Goal>> goals;
 
-    //    private static Map<Integer, Character> agents = new HashMap<Integer, Character>();
-    private static Map<Character, Agent> agentsByName = new HashMap<Character, Agent>();
-    private static List<Character> agentNames = new LinkedList<Character>();
+    private static Map<Character, Agent> agentsByName = new TreeMap<Character, Agent>();
+
+    private static GoalPrioritize goalPrioritize;
 
     public static Node state = new Node(null);
 
     private Level() {
     }
 
-    public static Map<Character, Agent> getAgents() {
-        return agentsByName;
-    }
-
-//    public static Map<Integer, Character> getAgents() {
-//        return state.getAgents();
-//    }
-
-    public static Map<Integer, Character> getBoxes() {
-        return state.getBoxes();
+    public static Collection<Agent> getAgents() {
+        return agentsByName.values();
     }
 
     public static char getGoal(int row, int col) {
@@ -137,13 +126,14 @@ public final class Level {
         return colors.get(object1).equals(colors.get(object2));
     }
 
-    public static Integer getGoalFor(Character agentName) {
+    public static Integer getGoalFor(Agent agent) {
 
-        if (goals == null) {
-            InstantiateGoalQueues();
-        }
+//        if (goals == null) {
+//            InstantiateGoalQueues();
+//        }
 
-        Queue<Goal> agentQueue = goals.get(agentName);
+        Queue<Goal> agentQueue = new ArrayDeque<Goal>(prioritizeGoalsForAgent(agent));
+//                goals.get(agent.name);
         Integer goalCount = 0;
 
         Goal goal = agentQueue.poll();
@@ -151,7 +141,8 @@ public final class Level {
 
         // keep searching for a goal, until you find unsatisfied
         // or you have tried all of them
-        while (goal.Status != Status.FREE) {
+        while (!(goal.isFree() && goal.areDependentSatisfied() &&
+                sameColor(Character.toUpperCase(goal.letter), agent.name))) {
 
             agentQueue.add(goal);
 
@@ -166,43 +157,50 @@ public final class Level {
         goal.Status = Status.TAKEN;
         agentQueue.add(goal);
 
-        agentsByName.get(agentName).goalTaken = goal;
+        agent.goalTaken = goal;
 
         return goal.hashCoordinates;
     }
 
-    private static void InstantiateGoalQueues() {
-        goals = new HashMap<Character, Queue<Goal>>();
-
-        for (Character agentName : agentsByName.keySet()) {
-            Queue<Goal> goalQueue = new ArrayDeque<Goal>(prioritizeGoalsForAgent(agentName));
-
-            goals.put(agentName, goalQueue);
-        }
-    }
+//    private static void InstantiateGoalQueues() {
+//        goals = new HashMap<Character, Queue<Goal>>();
+//
+//        for (Agent agent : getAgents()) {
+//            Queue<Goal> goalQueue = new ArrayDeque<Goal>(prioritizeGoalsForAgent(agent));
+//
+//            goals.put(agent.name, goalQueue);
+//        }
+//    }
 
     //TODO: do not dismiss goals of different color at this point
-    private static List<Goal> prioritizeGoalsForAgent(Character agentName) {
+    private static List<Goal> prioritizeGoalsForAgent(Agent agent) {
 
-        //TODO: change maxRow, maxCol
-        GoalPrioritize goalPrioritize = new GoalPrioritize(walls, goalsByCoordinates2, MAX_ROW, MAX_COLUMN);
-        List<Goal> prioritizedGoals = goalPrioritize.prioritizeFor(agentsByName.get(agentName).hashCoordinates);
-
-        Color agentColor = colors.get(agentName);
-        Set<Goal> goalsOfAgentColor = new HashSet<Goal>(GetGoalsOfColor(agentColor));
-
-        List<Goal> goalsToReturn = new LinkedList<Goal>();
-        for (Goal goal : prioritizedGoals) {
-            if (goalsOfAgentColor.contains(goal)) {
-                goalsToReturn.add(goal);
-            }
+        if (goalPrioritize == null) {
+            //Initialize priorities only on first call for goal prioritization
+            //TODO: change maxRow, maxCol
+            goalPrioritize =
+                    new GoalPrioritize(walls, goalsByCoordinates2, MAX_ROW, MAX_COLUMN, agent.hashCoordinates);
         }
 
-        return goalsToReturn;
+        List<Goal> prioritizedGoals = goalPrioritize.prioritizeFor(agent.hashCoordinates);
+
+        return prioritizedGoals;
+
+//        Color agentColor = agent.color;
+//        Set<Goal> goalsOfAgentColor = new HashSet<Goal>(GetGoalsOfColor(agentColor));
+//
+//        List<Goal> goalsToReturn = new LinkedList<Goal>();
+//        for (Goal goal : prioritizedGoals) {
+//            if (goalsOfAgentColor.contains(goal)) {
+//                goalsToReturn.add(goal);
+//            }
+//        }
+//
+//        return goalsToReturn;
     }
 
-    public static Integer getBoxFor(Character agentName, Integer goalHashCoordinates) {
-        char goalLetter = goalsByCoordinates2.get(goalHashCoordinates).letter;
+    public static Integer getBoxFor(Agent agent) {
+        char goalLetter = agent.goalTaken.letter;
         char boxLetter = Character.toUpperCase(goalLetter);
 
         int minDistance = Integer.MAX_VALUE;
@@ -214,7 +212,7 @@ public final class Level {
                 if (!takenBoxes.containsKey(boxHashCoordinates)) {
 
                     int currentDistance =
-                            Coordinates.manhattanDistance(boxHashCoordinates, agentsByName.get(agentName).hashCoordinates);
+                            Coordinates.manhattanDistance(boxHashCoordinates, agent.hashCoordinates);
 
                     //TODO: get closest box, which do not satisfy a goal with
                     //TODO: bigger or equal priority
@@ -226,16 +224,9 @@ public final class Level {
             }
         }
 
-        agentsByName.get(agentName).boxTaken = targetBox;
-        takenBoxes.put(targetBox, agentName);
+        agent.boxTaken = targetBox;
+        takenBoxes.put(targetBox, agent.name);
         return targetBox;
-    }
-
-    public static void setGoalFree(char agentName) {
-        Goal goal = agentsByName.get(agentName).goalTaken;
-        if(goal.Status == Status.TAKEN){
-            goal.Status = Status.FREE;
-        }
     }
 
     private static List<Goal> GetGoalsOfColor(Color targetColor) {
@@ -286,38 +277,15 @@ public final class Level {
         // TODO: add it in the "goal queue"
     }
 
-    public static List<Character> getAgentNames() {
-
-        if (agentNames.isEmpty()) {
-            agentNames.addAll(agentsByName.keySet());
-
-            Collections.sort(agentNames);
-        }
-
-        return agentNames;
-    }
-
     public static boolean AreGoalsSatisfied() {
 
         for (Goal goal : goalsByCoordinates2.values()) {
-            if (goal.Status != Status.SATISFIED) {
+            if (!goal.isSatisfied()) {
                 return false;
             }
         }
 
         return true;
-    }
-
-    public static boolean isAgentFree(Character agentName) {
-        return agentsByName.get(agentName).status == Status.FREE;
-    }
-
-    public static void setAgentBusy(Character agentName) {
-        agentsByName.get(agentName).status = Status.TAKEN;
-    }
-
-    public static void setAgentFree(Character agentName) {
-        agentsByName.get(agentName).status = Status.FREE;
     }
 
     //TODO: THIS IS AWFUL

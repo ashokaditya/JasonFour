@@ -14,8 +14,6 @@ public class Main {
 
     private static boolean fromFile = false;
 
-    private static int[] countFrontier = new int[10];
-    private static int[] countExplored = new int[10];
     private static int totalSolutionLength;
     private static long startTime;
 
@@ -23,33 +21,32 @@ public class Main {
 
     public static float maxMemory;
 
-
     public static void main(String[] args) throws Exception {
         serverMessages = GetInputSource(args);
 
         // Read level and create the initial state of the problem
         ReadInput(serverMessages);
 
-        HashMap<Character, List<Node>> solutions = new HashMap<Character, List<Node>>();
+        TreeMap<Agent, List<Node>> solutions = new TreeMap<Agent, List<Node>>();
 
         startTime = System.currentTimeMillis();
 
         while (!Level.AreGoalsSatisfied()) {
 
-            for (Character agentName : Level.getAgentNames()) {
-                if (Level.isAgentFree(agentName)) {
+            for (Agent agent : Level.getAgents()) {
+                if (agent.isFree()) {
 
-                    Level.setAgentBusy(agentName);
+                    agent.setBusy();
 
-                    List<Node> agentPlan = CreatePlan(agentName, args);
+                    List<Node> agentPlan = CreatePlan(agent, args);
 
                     //if there is no solution or no goals
                     if (agentPlan == null) {
-                        Level.setGoalFree(agentName);
-                        Level.setAgentFree(agentName);
+                        agent.setTakenGoalFree();
+                        agent.setFree();
                     }
 
-                    solutions.put(agentName, agentPlan);
+                    solutions.put(agent, agentPlan);
                 }
             }
 
@@ -59,17 +56,15 @@ public class Main {
         PrintTotals();
     }
 
-    private static List<Node> CreatePlan(Character agentName, String[] args) throws IOException {
-        Integer goal = Level.getGoalFor(agentName);
+    private static List<Node> CreatePlan(Agent agent, String[] args) throws IOException {
+        Integer goal = Level.getGoalFor(agent);
         if (goal == -1) {
             return null;
         }
-        Integer box = Level.getBoxFor(agentName, goal);
-
-        int agentHashCoordinates = Level.getAgents().get(agentName).hashCoordinates;
+        Integer box = Level.getBoxFor(agent);
 
         Node initialState = new Node(null);
-        initialState.agentHashCoordinates = agentHashCoordinates;
+        initialState.agentHashCoordinates = agent.hashCoordinates;
         initialState.updateFrom(Level.state);
         initialState.setDedicatedGoal(box, goal);
 
@@ -79,24 +74,24 @@ public class Main {
         Strategy strategy = getStrategy(initialState, args);
         List<Node> solution = client.Search(strategy);
 
-        countExplored[agentName - '0'] += strategy.explored.size();
-        countFrontier[agentName - '0'] += strategy.countFrontier();
+        agent.countExplored += strategy.explored.size();
+        agent.countFrontier += strategy.countFrontier();
 
         return solution;
     }
 
-    private static void ExecutePlans(HashMap<Character, List<Node>> solutions) throws IOException {
+    private static void ExecutePlans(TreeMap<Agent, List<Node>> solutions) throws IOException {
 
         Boolean needReplan = false;
         Node n;
 
         while (!needReplan) {
             List<String> jointAction = new LinkedList<String>();
-            List<Command> updateActions = new ArrayList<Command>();
+            TreeMap<Agent, Command> updateActions = new TreeMap<Agent, Command>();
 
-            for (char agentName : Level.getAgentNames()) {
+            for (Agent agent : Level.getAgents()) {
 
-                List<Node> list = solutions.get(agentName);
+                List<Node> list = solutions.get(agent);
 
                 //If there are any moves planned
                 if (list != null && !list.isEmpty()) {
@@ -104,21 +99,21 @@ public class Main {
                     //If this is the last planned move - replan on next step
                     if (list.size() == 1) {
                         needReplan = true;
-                        Level.setAgentFree(agentName);
-                        Level.setBoxFree(agentName);
-                        Level.setGoalFree(agentName);
+                        agent.setFree();
+                        agent.setTakenGoalFree();
+                        Level.setBoxFree(agent.name);
                     }
 
                     n = list.remove(0);
-                    updateActions.add(n.action);
+                    updateActions.put(agent, n.action);
                     jointAction.add(n.action.toString());
                 } else {
                     jointAction.add("NoOp");
                     needReplan = true;
-                    Level.setAgentFree(agentName);
-                    Level.setBoxFree(agentName);
-                    Level.setGoalFree(agentName);
-                    updateActions.add(null);
+                    agent.setFree();
+                    agent.setTakenGoalFree();
+                    Level.setBoxFree(agent.name);
+                    updateActions.put(agent, null);
                 }
             }
 
@@ -127,9 +122,12 @@ public class Main {
             if (fromFile) {
                 //if it is from file, just update regardless validity of actions
                 int i = 0;
-                for (Command command : updateActions) {
+                for (Map.Entry<Agent, Command> entry : updateActions.entrySet()) {
+                    char agentName = entry.getKey().name;
+                    Command command = entry.getValue();
+
                     if (command != null) {
-                        Level.update(Character.forDigit(i++, 10), command);
+                        Level.update(agentName, command);
                     }
                 }
 
@@ -145,24 +143,27 @@ public class Main {
             // Substring removes [] brackets
             response = response.substring(1, response.length() - 1);
 
-            int i = 0;
-            for (String result : response.split(",")) {
+            String[] splitResponse = response.split(",");
 
-                Command command = updateActions.get(i);
-                char agentName = Character.forDigit(i, 10);
+            for (Agent agent : Level.getAgents()) {
+                Command command = updateActions.get(agent);
+                String result = splitResponse[agent.name - '0'];
 
                 // If result is "True"
                 if (result.trim().equalsIgnoreCase("true")) {
                     if (command != null) {
-                        Level.update(agentName, command);
+                        Level.update(agent.name, command);
                     }
-                } else { //Then it should be "False"
+                } else {
+                    //Then it should be "False"
+
+                    //TODO: make agent wait for up to 5 rounds at random
+
                     needReplan = true;
-                    Level.setAgentFree(agentName);
-                    Level.setBoxFree(agentName);
-                    Level.setGoalFree(agentName);
+                    agent.setFree();
+                    agent.setTakenGoalFree();
+                    Level.setBoxFree(agent.name);
                 }
-                i++;
             }
         }
     }
@@ -278,8 +279,8 @@ public class Main {
         printStream.println();
         printStream.println("          Explored     Frontier");
 
-        for (char agentName : Level.getAgentNames()) {
-            printStream.format("Agent %c: %9d    %9d\n", agentName, countExplored[agentName - '0'], countFrontier[agentName - '0']);
+        for (Agent agent : Level.getAgents()) {
+            printStream.format("Agent %c: %9d    %9d\n", agent.name, agent.countExplored, agent.countFrontier);
         }
 
 //        printStream.println("");
