@@ -2,6 +2,7 @@ package Heuristics;
 
 import DataStructures.Coordinates;
 import DataStructures.Node;
+import DataStructures.Level;
 
 import java.util.*;
 
@@ -20,7 +21,7 @@ public abstract class Heuristic implements Comparator<Node> {
     public int h(Node n) {
 //        int agentHashCoordinates = Coordinates.hashCode(n.agentRow, n.agentCol);
 
-        if(n.h != -1){
+        if (n.h != -1) {
             return n.h;
         }
 
@@ -31,24 +32,24 @@ public abstract class Heuristic implements Comparator<Node> {
 
         int counter = 0;
 
-        for (Character letter : allLetters){
+        for (Character letter : allLetters) {
 
             Set<Integer> initialCoordinatesForBoxLetter = initialState.getBoxes(letter);
 
             HashSet<Integer> currentCoordinatesForBoxLetter = n.getBoxes(letter);
 
-            for (Integer coordinates : initialCoordinatesForBoxLetter){
-                if(!currentCoordinatesForBoxLetter.contains(coordinates)){
+            for (Integer coordinates : initialCoordinatesForBoxLetter) {
+                if (!currentCoordinatesForBoxLetter.contains(coordinates)) {
                     counter++;
                 }
             }
         }
 
-        if(initialState.box != n.box){
+        if (initialState.box != n.box) {
             counter--;
         }
 
-        h += counter*10;
+        h += counter * 10;
 
         n.h = h;
 

@@ -45,6 +45,7 @@ public class Main {
 
                     //if there is no solution or no goals
                     if (agentPlan == null) {
+                        Level.setGoalFree(agentName);
                         Level.setAgentFree(agentName);
                     }
 
@@ -65,7 +66,7 @@ public class Main {
         }
         Integer box = Level.getBoxFor(agentName, goal);
 
-        int agentHashCoordinates = Level.getAgents().get(agentName);
+        int agentHashCoordinates = Level.getAgents().get(agentName).hashCoordinates;
 
         Node initialState = new Node(null);
         initialState.agentHashCoordinates = agentHashCoordinates;
@@ -105,6 +106,7 @@ public class Main {
                         needReplan = true;
                         Level.setAgentFree(agentName);
                         Level.setBoxFree(agentName);
+                        Level.setGoalFree(agentName);
                     }
 
                     n = list.remove(0);
@@ -115,6 +117,7 @@ public class Main {
                     needReplan = true;
                     Level.setAgentFree(agentName);
                     Level.setBoxFree(agentName);
+                    Level.setGoalFree(agentName);
                     updateActions.add(null);
                 }
             }
@@ -157,6 +160,7 @@ public class Main {
                     needReplan = true;
                     Level.setAgentFree(agentName);
                     Level.setBoxFree(agentName);
+                    Level.setGoalFree(agentName);
                 }
                 i++;
             }
